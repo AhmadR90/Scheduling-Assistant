@@ -1,0 +1,74 @@
+[
+  {
+    "id": "03899c4d-87b1-4a0f-88bc-5ee97e18733c",
+    "name": "",
+    "email": "",
+    "shift": {
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "hours": 40,
+    "abilities": [],
+    "specialistTask": "",
+    "pto": [],
+    "specialistTarget": 0
+  },
+  {
+    "id": "f2fed86b-98fe-4e17-a8ec-a95a23308224",
+    "name": "",
+    "email": "",
+    "shift": {
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "hours": 40,
+    "abilities": [],
+    "specialistTask": "",
+    "pto": [],
+    "specialistTarget": 0
+  },
+  {
+    "id": "8c12f3c0-bdcf-402c-8667-9acaba68aa54",
+    "name": "",
+    "email": "",
+    "shift": {
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "hours": 40,
+    "abilities": [],
+    "specialistTask": "",
+    "pto": [],
+    "specialistTarget": 0
+  },
+  {
+    "id": "8ca448be-c8cc-4e5a-ba64-ed5d10c9e9d3",
+    "name": "",
+    "email": "",
+    "shift": {
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "hours": 40,
+    "abilities": [],
+    "specialistTask": "",
+    "pto": [],
+    "specialistTarget": 0
+  }
+]
