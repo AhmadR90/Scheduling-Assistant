@@ -4,9 +4,9 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import path from "path";
-// import fs from "fs/promises"; 
-import fs from 'fs'; // for fs.existsSync
-import fsPromises from 'fs/promises'; 
+// import fs from "fs/promises";
+import fs from "fs"; // for fs.existsSync
+import fsPromises from "fs/promises";
 import { fileURLToPath } from "url";
 import { google } from "googleapis";
 import OpenAI from "openai"; // <-- Import OpenAI library
@@ -24,7 +24,6 @@ async function loadInitialEmployees() {
 }
 
 const INITIAL_EMPLOYEES = await loadInitialEmployees(); // or use it inside a route/controller
-
 
 import { SCHEDULING_RULES } from "./src/data/schedulingRules.js";
 
@@ -92,8 +91,25 @@ async function initializeFile() {
     await fsPromises.writeFile(filePath, JSON.stringify([], null, 2));
   }
 }
-// --- API Endpoints ---
 
+app.delete("/api/employees/:id", async (req, res) => {
+  try {
+    const employeeId = req.params.id;
+    const fileData = await fsPromises.readFile(filePath, "utf-8");
+    const data = JSON.parse(fileData);
+    const updatedEmployees = data.filter((emp) => emp.id !== employeeId);
+
+    await fsPromises.writeFile(
+      filePath,
+      JSON.stringify(updatedEmployees, null, 2)
+    );
+    res.status(200).json({ message: "Employee deleted successfully." });
+  } catch (err) {
+    console.error("Error deleting employee:", err);
+    res.status(500).json({ message: "Internal server error." });
+  }
+});
+// --- API Endpoints ---
 // --- NEW: Chat Endpoint ---
 app.post("/api/chat", async (req, res) => {
   const { prompt } = req.body;
@@ -114,81 +130,6 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// Fixed: /api/user endpoint
-// Add this debug version of your endpoint
-// app.post("/api/user", async (req, res) => {
-//   try {
-//     const {
-//       name,
-//       email,
-//       shift,
-//       lunch,
-//       hours,
-//       abilities,
-//       specialistTask,
-//       pto,
-//       specialistTarget,
-//     } = req.body;
-
-//     // Generate a unique ID for the new user
-//     const id = uuidv4();
-//     console.log("UUID generated:", id);
-
-//     const newUser = {
-//       id,
-//       name,
-//       email,
-//       shift,
-//       lunch,
-//       hours,
-//       abilities,
-//       specialistTask,
-//       pto,
-//       specialistTarget,
-//     };
-//     console.log("New user data:", newUser); // Log the new user data for debugging
-
-//     try {
-//       // Read existing employees from file
-//       await initializeFile();
-//       const fileContent = await fs.readFile(filePath, "utf8");
-//       const currentEmployees = JSON.parse(fileContent || "[]");
-
-//       // Add new user to array
-//       currentEmployees.push(newUser);
-
-//       // Write updated data back to file
-//       const updatedContent = JSON.stringify(currentEmployees, null, 2);
-//       await fs.writeFile(filePath, updatedContent);
-
-//       console.log(`✅ User ${name} added successfully to file`);
-
-//       return res.status(201).json({
-//         message: "User added successfully",
-//         user: newUser,
-//       });
-//     } catch (fileError) {
-//       console.error("❌ Error writing to file:", fileError);
-//       console.error("❌ File error details:", {
-//         code: fileError.code,
-//         message: fileError.message,
-//         path: fileError.path,
-//       });
-
-//       return res.status(500).json({
-//         message: "Failed to save user to file",
-//         error: fileError.message,
-//       });
-//     }
-//   } catch (error) {
-//     console.error("❌ Error adding user:", error);
-//     return res.status(500).json({
-//       message: "Internal server error",
-//       error: error.message,
-//     });
-//   }
-// });
-
 app.post("/api/user", async (req, res) => {
   try {
     const {
@@ -203,7 +144,7 @@ app.post("/api/user", async (req, res) => {
       specialistTarget,
     } = req.body;
 
-    console.log("Received user data:", req.body)
+    console.log("Received user data:", req.body);
 
     // Generate a unique ID for the new user
     const id = uuidv4();
@@ -221,12 +162,10 @@ app.post("/api/user", async (req, res) => {
       pto,
       specialistTarget,
     };
-    // console.log("New user data:", newUser); // Log the new user data for debugging
 
     try {
-      // Read existing employees from file
       await initializeFile();
-  
+
       const fileContent = await fsPromises.readFile(filePath, "utf8");
       let currentEmployees = JSON.parse(fileContent);
 
@@ -234,8 +173,11 @@ app.post("/api/user", async (req, res) => {
 
       // Write updated data back to file
       const updatedContent = JSON.stringify(currentEmployees, null, 2);
-      console.log("Writing updated content to file:", updatedContent);
-      await fsPromises.writeFile(filePath, updatedContent);
+      // await fsPromises.writeFile(filePath, updatedContent);
+      await fsPromises.writeFile(
+        filePath,
+        JSON.stringify(updatedContent, null, 2)
+      );
 
       console.log(`✅ User ${name || "Unnamed"} added successfully to file`);
 
@@ -285,21 +227,35 @@ app.get("/api/events", async (req, res) => {
   }
 });
 
-app.get("/api/employees", (req, res) => res.status(200).json(currentEmployees));
-// app.post("/api/employees", async (req, res) => {
-//   currentEmployees = req.body;
+app.get("/api/employees", async (req, res) => {
+  try {
+    const fileData = await fsPromises.readFile(filePath, "utf-8");
+    const data = JSON.parse(fileData);
+    res.status(200).json(data);
+  } catch (err) {
+    console.error("Error reading employees file:", err);
+    res.status(500).json({ message: "Failed to load employee data." });
+  }
+});
 
-//   // Also update the file when employees are updated via this endpoint
-//   try {
-//     console.log("Here is the currentEmployees before writing to file:");
-//     await fs.writeFile(filePath, JSON.stringify(currentEmployees, null, 2));
-//     console.log("Employees updated in file and memory");
-//   } catch (error) {
-//     console.error("Error writing employees to file:", error);
-//   }
+app.patch("/api/employees", async (req, res) => {
+  try {
+    const updatedEmployees = req.body;
+    currentEmployees = updatedEmployees;
 
-//   res.status(200).json({ message: "Employees updated successfully." });
-// });
+    // Write to file
+    await fsPromises.writeFile(
+      filePath,
+      JSON.stringify(updatedEmployees, null, 2)
+    );
+
+    console.log("Employees updated in file and memory");
+    res.status(200).json({ message: "Employees updated successfully." });
+  } catch (error) {
+    console.error("Error updating employees:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+});
 
 app.get("/api/rules", (req, res) => res.status(200).json(currentRules));
 app.post("/api/rules", (req, res) => {

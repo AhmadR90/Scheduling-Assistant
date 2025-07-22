@@ -1,8 +1,8 @@
-[
-  {
-    "id": "03899c4d-87b1-4a0f-88bc-5ee97e18733c",
-    "name": "",
-    "email": "",
+{
+  "0": {
+    "id": "c646e5db-808e-442f-8106-31e198d3e053",
+    "name": "Zain",
+    "email": "zain@gmail.com",
     "shift": {
       "start": "09:00",
       "end": "17:00"
@@ -12,15 +12,19 @@
       "end": "13:00"
     },
     "hours": 40,
-    "abilities": [],
+    "abilities": [
+      "Journey Desk",
+      "Marketing",
+      "Sales"
+    ],
     "specialistTask": "",
     "pto": [],
     "specialistTarget": 0
   },
-  {
-    "id": "f2fed86b-98fe-4e17-a8ec-a95a23308224",
-    "name": "",
-    "email": "",
+  "1": {
+    "id": "e705d133-09f5-4d53-b258-bef93ff5a639",
+    "name": "Zain",
+    "email": "zain@gmail.com",
     "shift": {
       "start": "09:00",
       "end": "17:00"
@@ -30,15 +34,19 @@
       "end": "13:00"
     },
     "hours": 40,
-    "abilities": [],
+    "abilities": [
+      "Journey Desk",
+      "Marketing",
+      "Sales"
+    ],
     "specialistTask": "",
     "pto": [],
     "specialistTarget": 0
   },
-  {
-    "id": "8c12f3c0-bdcf-402c-8667-9acaba68aa54",
-    "name": "",
-    "email": "",
+  "2": {
+    "id": "8ec1ed2c-1a8c-44bd-b98b-cf2e1e295a3e",
+    "name": "ali",
+    "email": "ali@gmail.com",
     "shift": {
       "start": "09:00",
       "end": "17:00"
@@ -48,15 +56,45 @@
       "end": "13:00"
     },
     "hours": 40,
-    "abilities": [],
+    "abilities": [
+      "Network",
+      "Security",
+      "Scheduling",
+      "Dispatch",
+      "Reservations",
+      "Journey Desk",
+      "Marketing"
+    ],
     "specialistTask": "",
     "pto": [],
     "specialistTarget": 0
   },
-  {
-    "id": "8ca448be-c8cc-4e5a-ba64-ed5d10c9e9d3",
-    "name": "",
-    "email": "",
+  "c646e5db-808e-442f-8106-31e198d3e053": {
+    "id": "c646e5db-808e-442f-8106-31e198d3e053",
+    "name": "Zain",
+    "email": "zain@gmail.com",
+    "shift": {
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "hours": 40,
+    "abilities": [
+      "Journey Desk",
+      "Marketing",
+      "Sales",
+      "Reservations"
+    ],
+    "specialistTask": "",
+    "pto": [],
+    "specialistTarget": 0
+  },
+  "undefined": {
+    "name": "Ahsan",
+    "email": "another@gmail.com",
     "shift": {
       "start": "09:00",
       "end": "17:00"
@@ -71,4 +109,4 @@
     "pto": [],
     "specialistTarget": 0
   }
-]
+}

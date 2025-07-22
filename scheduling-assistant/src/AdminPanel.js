@@ -99,15 +99,15 @@ export default function AdminPanel({ employees, rules, onSaveRules, onEditEmploy
             </button>
         </div>
         <div className="employee-list-admin">
-            {Object.keys(employees).sort().map(name => (
-                <div key={name} className="employee-item">
+            {Object.keys(employees).sort().map(id => (
+                <div key={id} className="employee-item">
                 <span>
-                    <strong>{name}</strong> ({employees[name].email})<br/>
-                    <small>Specialty: {employees[name].specialistTask} (Target: {employees[name].specialistTarget} hrs)</small>
+                    <strong>{employees[id].name}</strong> ({employees[id].email})<br/>
+                    <small>Specialty: {employees[id].specialistTask} (Target: {employees[id].specialistTarget} hrs)</small>
                 </span>
                 <div>
-                    <button className="edit" onClick={() => onEditEmployee(name)}>Edit</button>
-                    <button className="remove" onClick={() => onRemoveEmployee(name)}>Remove</button>
+                    <button className="edit" onClick={() => onEditEmployee(employees[id])}>Edit</button>
+                    <button className="remove" onClick={() => onRemoveEmployee(employees[id])}>Remove</button>
                 </div>
                 </div>
             ))}
