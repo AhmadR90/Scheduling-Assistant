@@ -240,34 +240,9 @@
     "pto": []
   },
   {
-    "id": "df655194-e6b1-491d-a2d6-e304ed4450bd",
-    "name": "Ahmad",
+    "id": "969c4b55-f0b6-4582-880c-143fcf9706ae",
+    "name": "ahmad",
     "email": "ahmedrazawarriach786@gmail.com",
-    "shift": {
-      "start": "17:00",
-      "end": "22:00"
-    },
-    "lunch": {
-      "start": "12:00",
-      "end": "13:00"
-    },
-    "hours": 40,
-    "abilities": [
-      "Reservations",
-      "Scheduling",
-      "Sales",
-      "Marketing",
-      "Journey Desk"
-    ],
-    "specialistTask": "",
-    "schedulingNotes": "",
-    "pto": [],
-    "specialistTarget": 0
-  },
-  {
-    "id": "6b7d0515-e35a-4eb7-9a7d-178e30626f53",
-    "name": "Ali",
-    "email": "ali@gmail.com",
     "shift": {
       "start": "09:00",
       "end": "17:00"
@@ -279,9 +254,143 @@
     "hours": 40,
     "abilities": [
       "Reservations",
+      "Journey Desk",
+      "Marketing",
+      "Sales"
+    ],
+    "specialistTask": "",
+    "schedulingNotes": "",
+    "pto": [],
+    "specialistTarget": 0
+  },
+  {
+    "id": "7dc2348a-dcf7-41e5-b76a-1890263a79d9",
+    "name": "New",
+    "email": "ahmedrazawarriach786@gmail.com",
+    "shift": {
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "hours": 40,
+    "abilities": [
+      "Reservations",
+      "Journey Desk",
+      "Marketing",
+      "Sales"
+    ],
+    "specialistTask": "",
+    "schedulingNotes": "",
+    "pto": [],
+    "specialistTarget": 0
+  },
+  {
+    "id": "709a9d55-2cf4-4928-bd1f-bd4bc972a9f7",
+    "name": "Ahsan",
+    "email": "ahsan@gmail.com",
+    "shift": {
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "hours": 40,
+    "abilities": [
+      "Reservations",
+      "Security",
+      "Scheduling"
+    ],
+    "specialistTask": "",
+    "schedulingNotes": "",
+    "pto": [],
+    "specialistTarget": 0
+  },
+  {
+    "id": "f7ff765c-cee5-4f40-8e1e-9e908a8ff411",
+    "name": "sda",
+    "email": "user@gmail.com",
+    "shift": {
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "hours": 40,
+    "abilities": [
+      "Network",
+      "Marketing",
+      "Badges/Projects"
+    ],
+    "specialistTask": "",
+    "schedulingNotes": "",
+    "pto": [],
+    "specialistTarget": 0
+  },
+  {
+    "id": "82d17fb4-f14f-405f-b4c3-cbfc9c8fabe8",
+    "name": "SDFSD",
+    "email": "user@gmail.com",
+    "shift": {
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "hours": 40,
+    "abilities": [
       "Marketing",
       "Sales",
-      "Network"
+      "Scheduling"
+    ],
+    "specialistTask": "",
+    "schedulingNotes": "",
+    "pto": [],
+    "specialistTarget": 0
+  },
+  {
+    "id": "d0597ea0-b2a6-4285-b367-68bb788e639c",
+    "name": "FFG",
+    "email": "another@gmail.com",
+    "shift": {
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "hours": 40,
+    "abilities": [],
+    "specialistTask": "",
+    "schedulingNotes": "",
+    "pto": [],
+    "specialistTarget": 0
+  },
+  {
+    "id": "7be268fd-1468-49c7-9285-72729d9d2a4d",
+    "name": "FGFGFG",
+    "email": "user@gmail.com",
+    "shift": {
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "hours": 40,
+    "abilities": [
+      "Security",
+      "Dispatch"
     ],
     "specialistTask": "",
     "schedulingNotes": "",

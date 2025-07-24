@@ -5,7 +5,7 @@ import resourceTimelinePlugin from "@fullcalendar/resource-timeline";
 import interactionPlugin from "@fullcalendar/interaction";
 import "./App.css";
 
-// --- Helper Functions ---
+
 const timeToMinutes = (time) => {
   if (!time) return 0;
   const [hours, minutes] = time.split(":").map(Number);
@@ -18,7 +18,7 @@ const minutesToTime = (minutes) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
-// --- Main Component ---
+
 export default function SchedulerApp({
   employees,
   rules,
@@ -39,15 +39,13 @@ export default function SchedulerApp({
   const resources = useMemo(() => {
     return Object.keys(employees).map((name) => {
       const emp = employees[name];
-      
+
       return {
         id: emp.id,
         title: emp.name,
       };
     });
   }, [employees]);
-
- 
 
   useEffect(() => {
     const fetchGeneratedSchedule = async () => {
@@ -60,7 +58,6 @@ export default function SchedulerApp({
         const endDate = new Date(startDate);
         endDate.setDate(startDate.getDate() + 7);
 
-    
         const extEventRes = await fetch(
           `/api/events?start=${startDate.toISOString()}&end=${endDate.toISOString()}`
         );
@@ -69,9 +66,6 @@ export default function SchedulerApp({
         const response = await fetch("/events.json");
         const result = await response.json();
 
-       
-
-      
         const fullCalendarEvents = [];
 
         for (const emp of result) {
@@ -79,27 +73,24 @@ export default function SchedulerApp({
             (e) => e.id === emp.employeeId
           )?.name;
 
-
-        
           if (!empName) continue;
 
           fullCalendarEvents.push({
-            id: `${emp.taskId}-${emp.start}`, 
-            resourceId: emp.employeeId, 
+            id: `${emp.taskId}-${emp.start}`,
+            resourceId: emp.employeeId,
             title: emp.title,
             start: emp.start,
             end: emp.end,
             backgroundColor: getTaskColor(emp.title),
             borderColor: getTaskColor(emp.title),
             extendedProps: {
-              email: emp.email || "", 
+              email: emp.email || "",
               userName: empName,
               taskId: emp.taskId || null,
               shift: emp.shift || null,
             },
           });
         }
-        console.log("FullCalendar events:", fullCalendarEvents);
         onEventsGenerated(fullCalendarEvents);
       } catch (error) {
         console.error("Error fetching AI-generated schedule:", error);

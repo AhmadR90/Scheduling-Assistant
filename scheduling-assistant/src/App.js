@@ -61,23 +61,70 @@ export default function App() {
     }
     setEditingEvent(eventClickInfo.event);
   };
+  const handleEventSave = async (updatedEvent) => {
+    const payload = {
+      employeeId: updatedEvent.empId[0].toString(),
+      taskId: updatedEvent.taskId,
+      title: updatedEvent.title,
+      start: updatedEvent.start,
+      end: updatedEvent.end,
+    };
+    try {
+      const response = await fetch("/api/update-task", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-  const handleEventSave = (updatedEvent) => {
-    console.log("Updated Event details", updatedEvent);
-    const updatedEvents = scheduleEvents.map((e) =>
-      e.id === updatedEvent.id
-        ? { ...e, ...updatedEvent, ...getTaskColor(updatedEvent.title) }
-        : e
-    );
-    setScheduleEvents(updatedEvents);
-    setEditingEvent(null);
+      const result = await response.json();
+
+      if (response.ok) {
+        // Only update UI if backend update was successful
+        const updatedEvents = scheduleEvents.map((e) =>
+          e.id === updatedEvent.id
+            ? { ...e, ...updatedEvent, ...getTaskColor(updatedEvent.title) }
+            : e
+        );
+        setScheduleEvents(updatedEvents);
+        setEditingEvent(null);
+        console.log(result.message);
+      } else {
+        console.error("Failed to update event:", result.message);
+        alert(result.message);
+      }
+    } catch (error) {
+      console.error("Error sending update request:", error);
+      alert("An error occurred while updating the event.");
+    }
   };
 
-  const handleEventDelete = (eventId) => {
-    console.log("Event ID", eventId);
+  const handleEventDelete = async (taskId, employeeId) => {
+    const employeId = Array.isArray(employeeId) ? employeeId[0] : employeeId;
+
     if (window.confirm("Are you sure you want to delete this task?")) {
-      setScheduleEvents(scheduleEvents.filter((e) => e.id !== eventId));
-      setEditingEvent(null);
+      try {
+        const response = await fetch("/api/delete-task", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ employeId, taskId }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to delete task");
+        }
+
+        // If successful, update UI
+        setScheduleEvents(scheduleEvents.filter((e) => e.id !== taskId));
+        setEditingEvent(null);
+      } catch (error) {
+        console.error("Error deleting task:", error.message);
+        alert("Failed to delete the task. Please try again.");
+      }
     }
   };
 
@@ -203,8 +250,29 @@ export default function App() {
         const result = await response.json();
         console.log("Result:", result);
         if (response.ok) {
-          setEmployees([...employees, result.user]);
+          const addedUser = result.user;
+          setEmployees([...employees, addedUser]);
           console.log("✅ User added successfully:", result.message);
+
+          const scheduleResponse = await fetch("/api/generate-schedule", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              weekStart: weekStart.toISOString(), // Your logic to get current week's Monday
+              employees: [addedUser], // Only the new employee
+              rules: [], // Or provide existing rules logic if needed
+            }),
+          });
+
+          const scheduleResult = await scheduleResponse.json();
+          if (!scheduleResponse.ok) {
+            console.error(
+              "❌ Failed to generate schedule:",
+              scheduleResult.message
+            );
+          } else {
+            console.log("📅 Schedule for new employee added.");
+          }
         } else {
           console.error("❌ Failed:", result.message);
         }

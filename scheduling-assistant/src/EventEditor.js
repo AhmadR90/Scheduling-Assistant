@@ -8,30 +8,57 @@ export default function EventEditor({
   onClose,
   onSave,
   onDelete,
-})
-
-{
+}) {
   const [formData, setFormData] = useState({
+    empId: "",
+    taskId: "",
     title: "",
     start: "",
     end: "",
   });
-  console.log("employee", employee);
+
+  const defaultAbilities = [
+    "Reservations",
+    "Dispatch",
+    "Journey Desk",
+    "Network",
+    "Marketing",
+    "Security",
+    "Sales",
+    "Scheduling",
+    "Badges/Projects",
+  ];
+  // useEffect(() => {
+  //   if (event) {
+  //     const formatDateTime = (date) => {
+  //       if (!date) return "";
+  //       const d = new Date(date);
+  //       return d.toISOString().slice(0, 19); // YYYY-MM-DDTHH:mm:ss
+  //     };
+
+  //     setFormData({
+  //       empId: event._def.resourceIds,
+  //       taskId: event._def.extendedProps.taskId,
+  //       title: event.title,
+  //       start: formatDateTime(event.start),
+  //       end: formatDateTime(event.end),
+  //     });
+  //   }
+  // }, [event]);
   useEffect(() => {
     if (event) {
-      // Format the start and end times for the input fields
-      const formatTime = (date) => {
-        if (!date) return "";
-        const d = new Date(date);
-        return `${String(d.getHours()).padStart(2, "0")}:${String(
-          d.getMinutes()
-        ).padStart(2, "0")}`;
+      const extractTime = (isoString) => {
+        if (!isoString) return "";
+        const d = new Date(isoString);
+        return d.toTimeString().slice(0, 5); // "HH:mm"
       };
 
       setFormData({
+        empId: event._def.resourceIds,
+        taskId: event._def.extendedProps.taskId,
         title: event.title,
-        start: formatTime(event.start),
-        end: formatTime(event.end),
+        start: extractTime(event.start),
+        end: extractTime(event.end),
       });
     }
   }, [event]);
@@ -40,22 +67,18 @@ export default function EventEditor({
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
-
   const handleSave = () => {
-    // Reconstruct the full date objects before saving
-    const newStart = new Date(event.start);
-    const [startHours, startMinutes] = formData.start.split(":");
-    newStart.setHours(startHours, startMinutes);
+    const dateStr = new Date(event.start).toISOString().split("T")[0]; // "2025-07-20"
 
-    const newEnd = new Date(event.end);
-    const [endHours, endMinutes] = formData.end.split(":");
-    newEnd.setHours(endHours, endMinutes);
+    const startISO = `${dateStr}T${formData.start}:00`;
+    const endISO = `${dateStr}T${formData.end}:00`;
 
     onSave({
-      ...event,
+      empId: formData.empId,
+      taskId: formData.taskId,
       title: formData.title,
-      start: newStart,
-      end: newEnd,
+      start: startISO,
+      end: endISO,
     });
   };
 
@@ -66,12 +89,18 @@ export default function EventEditor({
       <div className="modal">
         <h3>Edit Task</h3>
         <div className="form-group">
-          <label>Task</label>
-          <h2> {event.title}</h2>
-          <select name="title" value={event.title} onChange={handleChange}>
-            {employee?.abilities?.map((a, idx) => (
-              <option key={idx} value={a.name}>
-                {a.name}
+          <div className="task-header">
+            <label htmlFor="title">Task</label>
+            <h1>{formData.title}</h1>
+          </div>
+
+          <select name="title" value={formData.title} onChange={handleChange}>
+            {(employee?.abilities?.length
+              ? employee.abilities.map((a) => a.name)
+              : defaultAbilities
+            ).map((task, idx) => (
+              <option key={idx} value={task}>
+                {task}
               </option>
             ))}
           </select>
@@ -100,7 +129,9 @@ export default function EventEditor({
           <button
             type="button"
             className="danger"
-            onClick={() => onDelete(event.id)}
+            onClick={() =>
+              onDelete(event._def.extendedProps.taskId, event._def.resourceIds)
+            }
           >
             Delete Task
           </button>

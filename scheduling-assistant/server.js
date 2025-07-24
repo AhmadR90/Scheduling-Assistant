@@ -14,7 +14,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const filePath = path.join(__dirname, "src/data/initialEmployees.json");
-const eventsFilePath = path.join(__dirname, "src/data/events.json");
+const eventsFilePath = path.join(__dirname, "public", "events.json");
 // const INITIAL_EMPLOYEES = JSON.parse(fs.readFile(filePath, "utf-8"));
 async function loadInitialEmployees() {
   const fileData = await fsPromises.readFile(filePath, "utf-8");
@@ -27,7 +27,7 @@ import { SCHEDULING_RULES } from "./src/data/schedulingRules.js";
 
 const buildSchedulingPrompt = (employees, weekStartDate) => {
   return `
-You are a smart scheduling assistant. Generate a detailed weekly schedule starting from ${weekStartDate} (Monday) based on the following employees and hard scheduling rules.
+You are a smart scheduling assistant.Generate a detailed 7-day weekly schedule from ${weekStartDate} (Monday) to Sunday based on the following employees and hard scheduling rules.
 
 ### EMPLOYEES:
 ${employees
@@ -185,13 +185,15 @@ async function initializeFile() {
 
 app.post("/api/generate-schedule", async (req, res) => {
   const { weekStart, employees, rules } = req.body;
+
   console.log("Generating schedule with weekStart:", weekStart);
 
   try {
+    console.log("1")
     const prompt = buildSchedulingPrompt(employees, weekStart);
-
+console.log("2")
     const response = await openai.chat.completions.create({
-      model: "gpt-4", // Use gpt-4 for better compliance with complex instructions
+      model: "gpt-4", // Use gpt-4 for better compliance with complex instruction
       messages: [
         {
           role: "system",
@@ -204,9 +206,9 @@ app.post("/api/generate-schedule", async (req, res) => {
       ],
       temperature: 0.3,
     });
-
+    console.log("Response",response)
     const reply = response.choices[0].message.content;
-
+    console.log("reply", reply);
     let parsedSchedule;
     try {
       parsedSchedule = JSON.parse(reply);
@@ -230,267 +232,85 @@ app.post("/api/generate-schedule", async (req, res) => {
   }
 });
 
-// app.post("/api/generate-schedule", async (req, res) => {
-//   const { weekStart, employees, rules } = req.body;
-//   console.log("Generating schedule with weekStart:", weekStart);
+//EVENTS ENDPOINTS
 
-//   try {
-//     const weekStartDate = new Date(weekStart);
-//     const employeeMap = new Map();
+app.delete("/api/delete-task", (req, res) => {
+  const { employeId, taskId } = req.body;
+  if (!employeId || !taskId) {
+    return res
+      .status(400)
+      .json({ error: "employeeId and taskId are required" });
+  }
+  let eventsData = [];
+  try {
+    const fileContent = fs.readFileSync(eventsFilePath, "utf-8");
+    eventsData = JSON.parse(fileContent);
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to read event file" });
+  }
 
-//     for (let i = 0; i < 7; i++) {
-//       const currentDate = new Date(weekStartDate);
-//       currentDate.setDate(weekStartDate.getDate() + i);
-//       const dateString = currentDate.toISOString().split("T")[0];
+  const initialLength = eventsData.length;
+  const updatedData = eventsData.filter(
+    (item) => !(item.employeeId === employeId && item.taskId === taskId)
+  );
 
-//       const slotTracker = { primary: {}, evening: {} };
+  if (updatedData.length === initialLength) {
+    return res.status(404).json({ message: "No matching task found" });
+  }
 
-//       // const assignAbilitySlot = (abilityName) => {
-//       //   for (const shiftName of ["primary", "evening"]) {
-//       //     const shift = rules.coverage[shiftName];
-//       //     const required = shift.requirements[abilityName];
-//       //     if (!required) continue;
+  try {
+    fs.writeFileSync(eventsFilePath, JSON.stringify(updatedData, null, 2));
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to write updated data" });
+  }
 
-//       //     const current = slotTracker[shiftName][abilityName] || 0;
-//       //     if (current < required) {
-//       //       slotTracker[shiftName][abilityName] = current + 1;
-//       //       return {
-//       //         start: shift.start,
-//       //         end: shift.end,
-//       //         shift: shiftName,
-//       //         date: dateString,
-//       //       };
-//       //     }
-//       //   }
-//       //   return null;
-//       // };
-//       const assignAbilitySlot = (abilityName) => {
-//         for (const shiftName of ["primary", "evening"]) {
-//           const shift = rules.coverage[shiftName];
-//           const required = shift.requirements[abilityName];
-//           if (!required) continue;
+  res.json({
+    message: "Task deleted successfully",
+    remainingTasks: updatedData,
+  });
+});
 
-//           const current = slotTracker[shiftName][abilityName] || 0;
-//           if (current < required) {
-//             slotTracker[shiftName][abilityName] = current + 1;
-//             const lunch = rules.scheduleRules?.lunch?.[shiftName] || null;
+app.put("/api/update-task", async (req, res) => {
+  const { employeeId, taskId, title, start, end } = req.body;
+  console.log("data", employeeId, taskId, title, start, end);
+  if (!employeeId || !taskId) {
+    return res.status(400).json({ message: "empId and taskId are required" });
+  }
 
-//             return {
-//               start: shift.start,
-//               end: shift.end,
-//               shift: shiftName,
-//               date: dateString,
-//               ...(lunch && { lunch }), // Attach lunch if defined
-//             };
-//           }
-//         }
-//         return null;
-//       };
+  try {
+    const rawData = await fsPromises.readFile(eventsFilePath);
+    const events = JSON.parse(rawData);
+    console.log("Events", events);
+    let updated = false;
 
-//       for (const emp of employees) {
-//         const userId = emp.id;
-//         const abilityArray = (emp.abilities || [])
-//           .map((ability) => {
-//             const base = {
-//               name: ability,
-//               userId,
-//               taskId: `${userId.split("-")[0]}-${ability
-//                 .toLowerCase()
-//                 .replace(/\s+/g, "-")}`,
-//             };
-//             const timeSlot = assignAbilitySlot(ability);
-//             return timeSlot ? { ...base, ...timeSlot } : null;
-//           })
-//           .filter(Boolean);
+    const updatedEvents = events.map((event) => {
+      if (event.taskId === taskId && event.employeeId === employeeId) {
+        updated = true;
+        return {
+          ...event,
+          title: title || event.title,
+          start: start || event.start,
+          end: end || event.end,
+        };
+      }
+      return event;
+    });
 
-//         if (!employeeMap.has(userId)) {
-//           employeeMap.set(userId, {
-//             ...emp,
-//             id: userId,
-//             abilities: [],
-//           });
-//         }
+    if (!updated) {
+      return res.status(404).json({ message: "Event not found" });
+    }
 
-//         // Merge today's abilities into existing employee
-//         const existing = employeeMap.get(userId);
-//         existing.abilities.push(...abilityArray);
-//       }
-//     }
+    await fsPromises.writeFile(
+      eventsFilePath,
+      JSON.stringify(updatedEvents, null, 2)
+    );
+    res.status(200).json({ message: "Event updated successfully" });
+  } catch (err) {
+    console.error("Error updating event:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
-//     const mergedEmployees = Array.from(employeeMap.values());
-
-//     // Optional: Send to OpenAI for formatting or enhancements
-//     // (You can skip this if you're happy with the result)
-//     const response = await openai.chat.completions.create({
-//       model: "gpt-3.5-turbo",
-//       messages: [
-//         {
-//           role: "system",
-//           content: `
-//           You are a scheduling assistant AI.
-//           For each user, return an array of their tasks (abilities) with:
-//           - name
-//           - userId
-//           - taskId
-//           - start
-//           - end
-//           - shift
-//           - date (YYYY-MM-DD)
-//           `.trim(),
-//         },
-//         {
-//           role: "user",
-//           content: JSON.stringify(mergedEmployees),
-//         },
-//       ],
-//     });
-//     res.json({ events: mergedEmployees });
-//   } catch (err) {
-//     console.error("Schedule Generation Error:", err);
-//     res.status(500).json({ message: "Failed to generate schedule" });
-//   }
-// });
-//   const { weekStart, employees, rules } = req.body;
-//   console.log("Generating schedule with weekStart:", weekStart);
-
-//   try {
-//     // Track how many slots filled per shift per ability
-//     const slotTracker = { primary: {}, evening: {} };
-
-//     const assignAbilitySlot = (abilityName) => {
-//       for (const shiftName of ["primary", "evening"]) {
-//         const shift = SCHEDULING_RULES.coverage[shiftName];
-//         const required = shift.requirements[abilityName];
-//         if (!required) continue;
-
-//         const current = slotTracker[shiftName][abilityName] || 0;
-//         if (current < required) {
-//           slotTracker[shiftName][abilityName] = current + 1;
-//           return {
-//             start: shift.start,
-//             end: shift.end,
-//             shift: shiftName,
-//           };
-//         }
-//       }
-//       return null; // No slot available
-//     };
-
-//     // STEP 1: Transform employees and assign slot times
-//     const scheduledEmployees = employees.map((emp, index) => {
-//       const userId = emp.id || `user-${index}`;
-//       const abilityArray = (emp.abilities || []).map((ability) => {
-//         const base = {
-//           name: ability,
-//           userId,
-//           taskId: `${userId.split("-")[0]}-${ability
-//             .toLowerCase()
-//             .replace(/\s+/g, "-")}`,
-//         };
-//         const timeSlot = assignAbilitySlot(ability);
-//         return timeSlot ? { ...base, ...timeSlot } : base;
-//       });
-
-//       return {
-//         ...emp,
-//         id: userId,
-//         abilities: abilityArray,
-//       };
-//     });
-//     // STEP 2: Call OpenAI to generate schedule
-//     const response = await openai.chat.completions.create({
-//       model: "gpt-3.5-turbo",
-//       messages: [
-//         {
-//           role: "system",
-//           content: `
-//           You are a scheduling assistant AI.
-//           For each user provided, return a new user object with the same fields as input.
-//           But convert their 'abilities' field into an array of objects. Each object should contain:
-//           - 'name': the ability name
-//           - 'userId': from the original user object
-//           - 'taskId': string formatted as 'userId-lowercased-ability'
-//           - 'start': the start time of their assigned shift
-//           - 'end': the end time of their assigned shift
-//           - 'shift': either 'primary' or 'evening' based on their assigned shift
-//           Return clean valid JSON. Do not wrap in backticks or markdown.
-//           `.trim(),
-//         },
-//         {
-//           role: "user",
-//           content: JSON.stringify(scheduledEmployees),
-//         },
-//       ],
-//     });
-//     res.json({ events: scheduledEmployees });
-//   } catch (err) {
-//     console.error("Schedule Generation Error:", err);
-//     res.status(500).json({ message: "Failed to generate schedule" });
-//   }
-// });
-
-// app.post("/api/generate-schedule", async (req, res) => {
-//   const { weekStart, employees, rules } = req.body;
-//   console.log("Generating schedule with weekStart:", weekStart);
-
-//   try {
-//     // STEP 1: Normalize and transform employees
-//     const transformedEmployees = employees.map((emp, index) => {
-//       const userId = emp.id || `user-${index}`;
-//       const abilityArray = (emp.abilities || []).map((ability) => ({
-//         name: ability,
-//         userId,
-//         taskId: `${userId.split("-")[0]}-${ability
-//           .toLowerCase()
-//           .replace(/\s+/g, "-")}`,
-//       }));
-
-//       return {
-//         ...emp,
-//         id: userId,
-//         abilities: abilityArray,
-//       };
-//     });
-
-//     // STEP 2: Call OpenAI
-//     const response = await openai.chat.completions.create({
-//       model: "gpt-3.5-turbo",
-//       messages: [
-//         {
-//           role: "system",
-//           content: `
-//       You are a data transformer AI.
-
-//       For each user provided, return a new user object with the same fields as input.
-//       But convert their 'abilities' field into an array of objects. Each object should contain:
-//       - 'name': the ability name
-//       - 'userId': from the original user object
-//       - 'taskId': string formatted as 'userId-lowercased-ability' (spaces replaced with dashes)
-
-//       Return clean valid JSON. Do not wrap in backticks or markdown.
-//   `.trim(),
-//         },
-//         {
-//           role: "user",
-//           content: JSON.stringify(employees),
-//         },
-//       ],
-//     });
-
-//     // STEP 3: Handle AI response
-//     const messageContent = response.choices[0].message.content;
-//     const cleaned = messageContent.replace(/```json|```/g, "").trim();
-//     const parsed = JSON.parse(cleaned);
-
-//     // console.log("Parsed Result:", JSON.stringify(parsed, null, 2));
-//     res.json({ events: parsed});
-//   } catch (err) {
-//     console.error("ChatGPT Schedule Error:", err);
-//     res.status(500).json({ message: "Failed to generate schedule from AI" });
-//   }
-// });
-
-// --- NEW: Chat Endpoint ---
 app.post("/api/chat", async (req, res) => {
   const { prompt } = req.body;
   if (!prompt) {
