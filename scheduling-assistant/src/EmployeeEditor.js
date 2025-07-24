@@ -23,8 +23,6 @@ export default function EmployeeEditor({
   const [formData, setFormData] = useState({});
 
   useEffect(() => {
-    // When the component loads or the employee prop changes, populate the form
-    // If it's a new employee, provide a default structure including the email.
     setFormData(
       employee || {
         name: "",
@@ -34,7 +32,8 @@ export default function EmployeeEditor({
         hours: 40,
         abilities: [],
         specialistTask: "",
-        specialistTarget: 0, // Default for new employee
+        schedulingNotes:"",
+        specialistTarget: 0, 
       }
     );
   }, [employee]);
@@ -158,6 +157,16 @@ export default function EmployeeEditor({
               />
             </div>
           </div>
+           <div className="form-group">
+              <label>Scheduling Notes</label>
+              <input
+                type="text"
+                placeholder="Ask AI for scheduling.."
+                name="schedulingNotes"
+                value={formData.schedulingNotes || ""}
+                onChange={handleChange}
+              />
+            </div>
           <div className="form-group">
             <label>Abilities</label>
             <div className="checkbox-group">

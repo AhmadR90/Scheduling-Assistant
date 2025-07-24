@@ -17,6 +17,7 @@
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.1",
     "multer": "^1.4.5-lts.1",
+    "nodemon": "^3.1.10",
     "openai": "^4.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -24,6 +25,7 @@
   },
   "scripts": {
     "start": "cross-env PORT=3000 react-scripts start",
+    "dev": "nodemon server.js",
     "build": "react-scripts build"
   },
   "browserslist": {

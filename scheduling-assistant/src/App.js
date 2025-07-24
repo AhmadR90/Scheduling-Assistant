@@ -9,7 +9,7 @@ import "./App.css";
 
 export default function App() {
   const [view, setView] = useState("scheduler");
-  const [priorities, SetPriorities] = useState("");
+  const [isEditingEmployee, setIsEditingEmployee] = useState(false);
   const [employees, setEmployees] = useState({});
   const [rules, setRules] = useState({});
   const [scheduleEvents, setScheduleEvents] = useState([]);
@@ -17,6 +17,7 @@ export default function App() {
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [editing, setIsEditing] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -39,7 +40,7 @@ export default function App() {
       setIsLoading(false);
     }
   };
-  // Fetch initial data
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -50,7 +51,6 @@ export default function App() {
     d.setHours(0, 0, 0, 0);
     return d;
   }
-
   // --- Event Handlers ---
   const handleEventClick = (eventClickInfo) => {
     if (eventClickInfo.event.backgroundColor === "#dc3545") {
@@ -63,6 +63,7 @@ export default function App() {
   };
 
   const handleEventSave = (updatedEvent) => {
+    console.log("Updated Event details", updatedEvent);
     const updatedEvents = scheduleEvents.map((e) =>
       e.id === updatedEvent.id
         ? { ...e, ...updatedEvent, ...getTaskColor(updatedEvent.title) }
@@ -73,57 +74,48 @@ export default function App() {
   };
 
   const handleEventDelete = (eventId) => {
+    console.log("Event ID", eventId);
     if (window.confirm("Are you sure you want to delete this task?")) {
       setScheduleEvents(scheduleEvents.filter((e) => e.id !== eventId));
       setEditingEvent(null);
     }
   };
 
-  // --- Employee and Rule Handlers ---
-  // const handleSaveEmployee = async (employeeData) => {
-  //   setIsLoading(true);
-  //   const updatedEmployees = { ...employees };
-  //   const isNew = !Object.keys(employees).includes(employeeData.id);
-  //   if (isNew) updatedEmployees[employeeData.id] = employeeData;
-  //   else {
-  //     if (editingEmployee && editingEmployee.id !== employeeData.id) {
-  //       delete updatedEmployees[editingEmployee.id];
-  //     }
-  //     updatedEmployees[employeeData.id] = employeeData;
-  //   }
-  //   try {
-  //     await fetch("/api/employees", {
-  //       method: "PATCH",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify(updatedEmployees),
-  //     });
-  //     setEmployees(updatedEmployees);
-  //   } catch (error) {
-  //     console.error("Error saving employees:", error);
-  //   } finally {
-  //     setIsLoading(false);
-  //     setEditingEmployee(null);
-  //   }
-  // };
+  const handleEditEmployee = async (employee) => {
+    const newEmployee = {
+      id: employee.id,
+      name: employee.name,
+      email: employee.email,
+      shift: employee.shift,
+      lunch: employee.lunch,
+      hours: 40,
+      abilities: employee.abilities || [],
+      specialistTask: employee.specialistTask || "",
+      schedulingNotes: employee.schedulingNotes || "",
+      pto: employee.pto || [],
+      specialistTarget: employee.specialistTarget || 0,
+    };
 
-   const handleEditEmployee = async (employee) => {
-    setIsLoading(true);
     try {
       const response = await fetch("/api/employees", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(employee),
+        body: JSON.stringify(newEmployee),
       });
       fetchData();
-    } catch (error) {
-      console.error("Error updating employee:", error);
-    } finally {
-      setIsLoading(false);
-      setEditingEmployee(null);
+      const result = await response.json();
+      if (response.ok) {
+        console.log("✅ User Updated successfully:", result.message);
+      } else {
+        console.error("❌ Failed:", result.message);
+      }
+    } catch (err) {
+      console.error("❌ Server error:", err);
     }
+
+    setEditingEmployee(null);
   };
 
-  
   const handleRemoveEmployee = async (employee) => {
     if (!window.confirm(`Are you sure you want to remove ${employee.name}?`))
       return;
@@ -163,47 +155,68 @@ export default function App() {
       hours: 40,
       abilities: [],
       specialistTask: "",
+      schedulingNotes: "",
       pto: [],
       specialistTarget: 0,
+    });
+  };
+  const initializeEditingEmployeeState = (employee) => {
+    setIsEditingEmployee(true);
+    setEditingEmployee({
+      id: employee.id,
+      name: employee.name,
+      email: employee.email,
+      shift: employee.shift,
+      lunch: employee.lunch,
+      hours: employee.hours,
+      abilities: employee.abilities,
+      specialistTask: employee.specialistTask,
+      schedulingNotes: employee.schedulingNotes,
+      pto: employee.pto,
+      specialistTarget: employee.specialistTarget,
     });
   };
 
   const handleAddNewEmployee = async (employeeData) => {
     const newEmployee = {
-      name: employeeData.name, // You can replace with dynamic input later
+      name: employeeData.name,
       email: employeeData.email,
-      shift: { start: "09:00", end: "17:00" },
-      lunch: { start: "12:00", end: "13:00" },
+      shift: employeeData.shift,
+      lunch: employeeData.lunch,
       hours: 40,
       abilities: employeeData.abilities || [],
       specialistTask: employeeData.specialistTask || "",
+      schedulingNotes: employeeData.schedulingNotes || "",
       pto: employeeData.pto || [],
       specialistTarget: employeeData.specialistTarget || 0, // Default for new employee
     };
+    if (!isEditingEmployee) {
+      try {
+        const response = await fetch("/api/employees", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(newEmployee),
+        });
 
-    try {
-      const response = await fetch("/api/user", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newEmployee),
-      });
-
-      const result = await response.json();
-      console.log("Result:", result);
-      if (response.ok) {
-        setEmployees([...employees, result.user]);
-        console.log("✅ User added successfully:", result.message);
-      } else {
-        console.error("❌ Failed:", result.message);
+        const result = await response.json();
+        console.log("Result:", result);
+        if (response.ok) {
+          setEmployees([...employees, result.user]);
+          console.log("✅ User added successfully:", result.message);
+        } else {
+          console.error("❌ Failed:", result.message);
+        }
+      } catch (err) {
+        console.error("❌ Server error:", err);
       }
-    } catch (err) {
-      console.error("❌ Server error:", err);
+    } else {
+      await handleEditEmployee(employeeData);
+      setEditingEmployee(false);
     }
-
     // This still shows the form with empty fields for further editing
-    console.log("Adding new employee:", newEmployee);
+
     setEditingEmployee(null);
   };
 
@@ -226,8 +239,11 @@ export default function App() {
       {editingEmployee && (
         <EmployeeEditor
           employee={editingEmployee}
-          onSave={handleSaveEmployee}
-          onClose={() => setEditingEmployee(null)}
+          onSave={handleAddNewEmployee}
+          onClose={() => {
+            setEditingEmployee(null);
+            setIsEditingEmployee(false);
+          }}
         />
       )}
       {editingEvent && (
@@ -239,7 +255,6 @@ export default function App() {
           onDelete={handleEventDelete}
         />
       )}
-
       <div className="controls">
         <h2>Controls</h2>
         <div className="view-switcher">
@@ -292,14 +307,6 @@ export default function App() {
                 }
               />
             </label>
-            <label>
-              Employee Priorities
-              <input
-                type="text"
-                placeholder="Share your available working day's"
-                onChange={(e) => SetPriorities(e.target.value)}
-              />
-            </label>
           </div>
         )}
 
@@ -326,9 +333,8 @@ export default function App() {
             employees={employees}
             rules={rules}
             onSaveRules={handleSaveRules}
-            onEditEmployee={(id) =>
-              setEditingEmployee({ id, ...employees[id] })
-            }
+            onEditEmployee={initializeEditingEmployeeState}
+            setEditingEmployee={setEditingEmployee}
             onRemoveEmployee={handleRemoveEmployee}
             onAddNewEmployee={initializeState}
           />

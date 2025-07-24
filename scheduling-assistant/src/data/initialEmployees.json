@@ -1,11 +1,251 @@
-{
-  "0": {
-    "id": "c646e5db-808e-442f-8106-31e198d3e053",
-    "name": "Zain",
-    "email": "zain@gmail.com",
+[
+  {
+    "id": "c646e5db-808e-442f-8106-31e198d3e054",
+    "name": "Antje",
+    "email": "antje.martin@fortis.co",
     "shift": {
-      "start": "09:00",
+      "start": "07:30",
+      "end": "13:30"
+    },
+    "lunch": {
+      "start": "",
+      "end": ""
+    },
+    "hours": 30,
+    "abilities": [
+      "Journey Desk"
+    ],
+    "specialistTask": "Journey Desk",
+    "specialistTarget": 30,
+    "pto": []
+  },
+  {
+    "id": "c646e5db-808e-442f-8106-31e198d3e055",
+    "name": "Adam",
+    "email": "adam.jones@fortis.co",
+    "shift": {
+      "start": "07:30",
       "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:30",
+      "end": "14:00"
+    },
+    "hours": 40,
+    "abilities": [
+      "Reservations",
+      "Dispatch",
+      "Network"
+    ],
+    "specialistTask": "Network",
+    "specialistTarget": 2,
+    "pto": []
+  },
+  {
+    "id": "c646e5db-808e-442f-8106-31e198d3e056",
+    "name": "Heather",
+    "email": "heather.bolt@fortis.co",
+    "shift": {
+      "start": "07:00",
+      "end": "16:30"
+    },
+    "lunch": {
+      "start": "11:00",
+      "end": "12:30"
+    },
+    "hours": 40,
+    "abilities": [
+      "Reservations",
+      "Dispatch",
+      "Network"
+    ],
+    "specialistTask": "Network",
+    "specialistTarget": 15,
+    "pto": []
+  },
+  {
+    "id": "c646e5db-808e-442f-8106-31e198d3e057",
+    "name": "Sheridan",
+    "email": "sheridan.swathwood@fortis.co",
+    "shift": {
+      "start": "07:30",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:30"
+    },
+    "hours": 40,
+    "abilities": [
+      "Reservations",
+      "Dispatch",
+      "Network"
+    ],
+    "specialistTask": "Network",
+    "specialistTarget": 5,
+    "pto": []
+  },
+  {
+    "id": "c646e5db-808e-442f-8106-31e198d3e058",
+    "name": "Katy",
+    "email": "katy.ahner@fortis.co",
+    "shift": {
+      "start": "12:00",
+      "end": "21:00"
+    },
+    "lunch": {
+      "start": "15:00",
+      "end": "16:00"
+    },
+    "hours": 40,
+    "abilities": [
+      "Reservations",
+      "Dispatch",
+      "Badges/Projects"
+    ],
+    "specialistTask": "Badges/Projects",
+    "specialistTarget": 2,
+    "pto": []
+  },
+  {
+    "id": "c646e5db-808e-442f-8106-31e198d3e059",
+    "name": "SydPo",
+    "email": "sydney.powell@fortis.co",
+    "shift": {
+      "start": "11:30",
+      "end": "21:00"
+    },
+    "lunch": {
+      "start": "16:00",
+      "end": "17:30"
+    },
+    "hours": 40,
+    "abilities": [
+      "Reservations",
+      "Dispatch",
+      "Scheduling"
+    ],
+    "specialistTask": "Scheduling",
+    "specialistTarget": 5,
+    "pto": []
+  },
+  {
+    "id": "c646e5db-808e-442f-8106-31e198d3e060",
+    "name": "Elliott",
+    "email": "elliott.wright@fortis.co",
+    "shift": {
+      "start": "07:30",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:30"
+    },
+    "hours": 40,
+    "abilities": [
+      "Reservations",
+      "Dispatch",
+      "Marketing"
+    ],
+    "specialistTask": "Marketing",
+    "specialistTarget": 2,
+    "pto": []
+  },
+  {
+    "id": "c646e5db-808e-442f-8106-31e198d3e061",
+    "name": "Brian Adie",
+    "email": "brian.adie@fortis.co",
+    "shift": {
+      "start": "07:30",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:30",
+      "end": "14:00"
+    },
+    "hours": 40,
+    "abilities": [
+      "Reservations",
+      "Dispatch",
+      "Journey Desk"
+    ],
+    "specialistTask": "Journey Desk",
+    "specialistTarget": 15,
+    "pto": []
+  },
+  {
+    "id": "c646e5db-808e-442f-8106-31e198d3e062",
+    "name": "Paul",
+    "email": "paul.edwards@fortis.co",
+    "shift": {
+      "start": "07:30",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:30",
+      "end": "14:00"
+    },
+    "hours": 40,
+    "abilities": [
+      "Reservations",
+      "Dispatch",
+      "Security"
+    ],
+    "specialistTask": "Security",
+    "specialistTarget": 25,
+    "pto": []
+  },
+  {
+    "id": "c646e5db-808e-442f-8106-31e198d3e063",
+    "name": "Shelby",
+    "email": "shelby.lyles@fortisriders.co",
+    "shift": {
+      "start": "07:30",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:30",
+      "end": "14:00"
+    },
+    "hours": 40,
+    "abilities": [
+      "Reservations",
+      "Dispatch",
+      "Journey Desk"
+    ],
+    "specialistTask": "Journey Desk",
+    "specialistTarget": 8,
+    "pto": []
+  },
+  {
+    "id": "c646e5db-808e-442f-8106-31e198d3e064",
+    "name": "SydMo",
+    "email": "sydney.morgan@fortis.co",
+    "shift": {
+      "start": "07:30",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:30"
+    },
+    "hours": 40,
+    "abilities": [
+      "Reservations",
+      "Dispatch",
+      "Sales"
+    ],
+    "specialistTask": "Sales",
+    "specialistTarget": 5,
+    "pto": []
+  },
+  {
+    "id": "df655194-e6b1-491d-a2d6-e304ed4450bd",
+    "name": "Ahmad",
+    "email": "ahmedrazawarriach786@gmail.com",
+    "shift": {
+      "start": "17:00",
+      "end": "22:00"
     },
     "lunch": {
       "start": "12:00",
@@ -13,39 +253,20 @@
     },
     "hours": 40,
     "abilities": [
-      "Journey Desk",
+      "Reservations",
+      "Scheduling",
+      "Sales",
       "Marketing",
-      "Sales"
+      "Journey Desk"
     ],
     "specialistTask": "",
+    "schedulingNotes": "",
     "pto": [],
     "specialistTarget": 0
   },
-  "1": {
-    "id": "e705d133-09f5-4d53-b258-bef93ff5a639",
-    "name": "Zain",
-    "email": "zain@gmail.com",
-    "shift": {
-      "start": "09:00",
-      "end": "17:00"
-    },
-    "lunch": {
-      "start": "12:00",
-      "end": "13:00"
-    },
-    "hours": 40,
-    "abilities": [
-      "Journey Desk",
-      "Marketing",
-      "Sales"
-    ],
-    "specialistTask": "",
-    "pto": [],
-    "specialistTarget": 0
-  },
-  "2": {
-    "id": "8ec1ed2c-1a8c-44bd-b98b-cf2e1e295a3e",
-    "name": "ali",
+  {
+    "id": "6b7d0515-e35a-4eb7-9a7d-178e30626f53",
+    "name": "Ali",
     "email": "ali@gmail.com",
     "shift": {
       "start": "09:00",
@@ -57,56 +278,14 @@
     },
     "hours": 40,
     "abilities": [
-      "Network",
-      "Security",
-      "Scheduling",
-      "Dispatch",
       "Reservations",
-      "Journey Desk",
-      "Marketing"
-    ],
-    "specialistTask": "",
-    "pto": [],
-    "specialistTarget": 0
-  },
-  "c646e5db-808e-442f-8106-31e198d3e053": {
-    "id": "c646e5db-808e-442f-8106-31e198d3e053",
-    "name": "Zain",
-    "email": "zain@gmail.com",
-    "shift": {
-      "start": "09:00",
-      "end": "17:00"
-    },
-    "lunch": {
-      "start": "12:00",
-      "end": "13:00"
-    },
-    "hours": 40,
-    "abilities": [
-      "Journey Desk",
       "Marketing",
       "Sales",
-      "Reservations"
+      "Network"
     ],
     "specialistTask": "",
-    "pto": [],
-    "specialistTarget": 0
-  },
-  "undefined": {
-    "name": "Ahsan",
-    "email": "another@gmail.com",
-    "shift": {
-      "start": "09:00",
-      "end": "17:00"
-    },
-    "lunch": {
-      "start": "12:00",
-      "end": "13:00"
-    },
-    "hours": 40,
-    "abilities": [],
-    "specialistTask": "",
+    "schedulingNotes": "",
     "pto": [],
     "specialistTarget": 0
   }
-}
+]

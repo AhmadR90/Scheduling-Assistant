@@ -1,9 +1,19 @@
 // src/AdminPanel.js
-import React, { useState, useEffect } from 'react';
-import './App.css'; // Reuse the main stylesheet
+import React, { useState, useEffect } from "react";
+import "./App.css"; // Reuse the main stylesheet
 
-export default function AdminPanel({ employees, rules, onSaveRules, onEditEmployee, onRemoveEmployee, onAddNewEmployee }) { // Receive the new prop
+export default function AdminPanel({
+  employees,
+  rules,
+  onSaveRules,
+  onEditEmployee,
+  onRemoveEmployee,
+  onAddNewEmployee,
+  setEditingEmployee
+}) {
+  // Receive the new prop
   const [editableRules, setEditableRules] = useState(rules);
+ 
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -14,7 +24,7 @@ export default function AdminPanel({ employees, rules, onSaveRules, onEditEmploy
     const newValue = parseInt(value, 10);
     if (isNaN(newValue)) return;
 
-    setEditableRules(prevRules => ({
+    setEditableRules((prevRules) => ({
       ...prevRules,
       coverage: {
         ...prevRules.coverage,
@@ -42,7 +52,7 @@ export default function AdminPanel({ employees, rules, onSaveRules, onEditEmploy
   return (
     <div className="admin-panel">
       <h1>Admin Settings</h1>
-      
+
       <div className="admin-section">
         <h2>Coverage Requirements</h2>
         <div className="rule-card">
@@ -52,7 +62,13 @@ export default function AdminPanel({ employees, rules, onSaveRules, onEditEmploy
             <input
               type="number"
               value={editableRules.coverage.primary.requirements.Reservations}
-              onChange={(e) => handleRequirementChange('primary', 'Reservations', e.target.value)}
+              onChange={(e) =>
+                handleRequirementChange(
+                  "primary",
+                  "Reservations",
+                  e.target.value
+                )
+              }
             />
           </div>
           <div className="rule-input-group">
@@ -60,7 +76,9 @@ export default function AdminPanel({ employees, rules, onSaveRules, onEditEmploy
             <input
               type="number"
               value={editableRules.coverage.primary.requirements.Dispatch}
-              onChange={(e) => handleRequirementChange('primary', 'Dispatch', e.target.value)}
+              onChange={(e) =>
+                handleRequirementChange("primary", "Dispatch", e.target.value)
+              }
             />
           </div>
         </div>
@@ -71,22 +89,30 @@ export default function AdminPanel({ employees, rules, onSaveRules, onEditEmploy
             <input
               type="number"
               value={editableRules.coverage.evening.requirements.Reservations}
-              onChange={(e) => handleRequirementChange('evening', 'Reservations', e.target.value)}
+              onChange={(e) =>
+                handleRequirementChange(
+                  "evening",
+                  "Reservations",
+                  e.target.value
+                )
+              }
             />
           </div>
-           <div className="rule-input-group">
+          <div className="rule-input-group">
             <label>Dispatch:</label>
             <input
               type="number"
               value={editableRules.coverage.evening.requirements.Dispatch}
-              onChange={(e) => handleRequirementChange('evening', 'Dispatch', e.target.value)}
+              onChange={(e) =>
+                handleRequirementChange("evening", "Dispatch", e.target.value)
+              }
             />
           </div>
         </div>
         <div className="save-rules-container">
-            <button onClick={handleSave} disabled={isSaving}>
-                {isSaving ? 'Saving...' : 'Save Rule Changes'}
-            </button>
+          <button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? "Saving..." : "Save Rule Changes"}
+          </button>
         </div>
       </div>
 
@@ -94,22 +120,41 @@ export default function AdminPanel({ employees, rules, onSaveRules, onEditEmploy
         <h2>Manage Employees</h2>
         {/* --- Add New Employee Button --- */}
         <div className="admin-actions">
-            <button onClick={onAddNewEmployee} className="add-new">
-                Add New Employee
-            </button>
+          <button onClick={onAddNewEmployee} className="add-new">
+            Add New Employee
+          </button>
         </div>
         <div className="employee-list-admin">
-            {Object.keys(employees).sort().map(id => (
-                <div key={id} className="employee-item">
+          {Object.keys(employees)
+            .sort()
+            .map((id) => (
+              <div key={id} className="employee-item">
                 <span>
-                    <strong>{employees[id].name}</strong> ({employees[id].email})<br/>
-                    <small>Specialty: {employees[id].specialistTask} (Target: {employees[id].specialistTarget} hrs)</small>
+                  <strong>{employees[id].name}</strong> ({employees[id].email})
+                  <br />
+                  <small>
+                    Specialty: {employees[id].specialistTask} (Target:{" "}
+                    {employees[id].specialistTarget} hrs)
+                  </small>
                 </span>
                 <div>
-                    <button className="edit" onClick={() => onEditEmployee(employees[id])}>Edit</button>
-                    <button className="remove" onClick={() => onRemoveEmployee(employees[id])}>Remove</button>
+                  <button
+                    className="edit"
+                    onClick={
+                      (() => {
+                        onEditEmployee(employees[id])
+                      })}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="remove"
+                    onClick={() => onRemoveEmployee(employees[id])}
+                  >
+                    Remove
+                  </button>
                 </div>
-                </div>
+              </div>
             ))}
         </div>
       </div>

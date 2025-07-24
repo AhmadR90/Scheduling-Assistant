@@ -4,19 +4,17 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import path from "path";
-// import fs from "fs/promises";
-import fs from "fs"; // for fs.existsSync
+import fs from "fs";
 import fsPromises from "fs/promises";
 import { fileURLToPath } from "url";
 import { google } from "googleapis";
-import OpenAI from "openai"; // <-- Import OpenAI library
+import OpenAI from "openai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Fix: Use consistent file path
 const filePath = path.join(__dirname, "src/data/initialEmployees.json");
-
+const eventsFilePath = path.join(__dirname, "src/data/events.json");
 // const INITIAL_EMPLOYEES = JSON.parse(fs.readFile(filePath, "utf-8"));
 async function loadInitialEmployees() {
   const fileData = await fsPromises.readFile(filePath, "utf-8");
@@ -26,6 +24,99 @@ async function loadInitialEmployees() {
 const INITIAL_EMPLOYEES = await loadInitialEmployees(); // or use it inside a route/controller
 
 import { SCHEDULING_RULES } from "./src/data/schedulingRules.js";
+
+const buildSchedulingPrompt = (employees, weekStartDate) => {
+  return `
+You are a smart scheduling assistant. Generate a detailed weekly schedule starting from ${weekStartDate} (Monday) based on the following employees and hard scheduling rules.
+
+### EMPLOYEES:
+${employees
+  .map((emp, idx) => {
+    return `
+Employee ${idx + 1}:
+- Name: ${emp.name}
+- ID: ${emp.id}
+- Email: ${emp.email}
+- Total Weekly Hours: ${emp.hours}
+- Shift: ${emp.shift.start} to ${emp.shift.end}
+- Lunch: ${emp.lunch.start} to ${emp.lunch.end}
+- Abilities: ${emp.abilities.join(", ") || "None"}
+- Specialist Task: ${emp.specialistTask || "None"}
+- Specialist Target Hours: ${emp.specialistTarget || 0}
+- PTO: ${emp.pto?.length > 0 ? JSON.stringify(emp.pto) : "None"}
+- Message: ${emp.message || "None"}
+`;
+  })
+  .join("\n")}
+
+### ABSOLUTE RULES TO FOLLOW (NO EXCEPTIONS):
+
+1. *Exact Daily Coverage (08:00-17:00)*:
+   - EXACTLY 3 people on Reservations
+   - EXACTLY 1 person on Dispatch
+   - NEVER assign more than 3 people to Reservations during this time
+
+2. *Evening Coverage (17:00+)*:
+   - Goal: 3 Reservations + 1 Dispatch
+   - Minimum: 2 Reservations + 1 Dispatch
+
+3. *Dispatch Continuity*:
+   - Dispatch must be staffed continuously during ALL operational hours, including lunch
+   - Never allow a time slot with no Dispatch person
+
+4. *Lunch Rules*:
+   - EVERY employee must receive a lunch break
+   - Acceptable lunch windows for Greenville staff:
+     • 11:00-12:30 ET
+     • 12:00-13:30 ET
+     • 12:30-14:00 ET
+     • NO lunch breaks after 15:00 unless specified
+   - Exception: Katy (Reno) can have lunch from 15:00-16:00
+   - DO NOT drop below 3 Reservations + 1 Dispatch during lunch slots
+
+5. *Scheduling Hierarchy (in priority order)*:
+   1. EXACT coverage (3 Reservations + 1 Dispatch from 08:00–17:00)
+   2. DISPATCH continuity (including lunch)
+   3. LUNCH compliance (everyone gets one, in allowed window)
+   4. EVENING coverage (17:00+ goal: 3 Reservations + 1 Dispatch, minimum: 2 + 1)
+   5. EMPLOYEE hour totals must match exactly
+   6. SPECIALIST hours only after all other rules satisfied
+
+6. *Preferences & Availability*:
+   - Respect employee “message” field (e.g., “not available on Tuesday after 4PM” or “prefers marketing on Tuesdays”)
+   - Do your best to accommodate preferences if coverage rules are still met
+
+### REQUIRED OUTPUT FORMAT:
+Return an array of JSON events like this:
+[
+  {
+    "employeeId": "UUID",
+    "title": "Reservations",
+    taskId: "UUID-Reservations",
+    date: "2025-07-22",
+    "start": "2025-07-22T08:00:00",
+    "end": "2025-07-22T12:00:00"
+  },
+  {
+    "employeeId": "UUID",
+    "title": "Lunch",
+    taskId: "UUID-Lunch",
+    date: "2025-07-22",
+    "start": "2025-07-22T12:00:00",
+    "end": "2025-07-22T13:00:00"
+  },
+  ...
+]
+
+Each event must:
+- Match employee hours exactly (sum total = target hours)
+- Reflect lunch breaks as “Lunch”
+- Include specialist time (if any) labeled as their specialist task
+- Respect all role/lunch/time restrictions
+
+Output only valid JSON array — no commentary.
+  `;
+};
 
 // --- Environment and Credential Checks ---
 if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
@@ -92,24 +183,313 @@ async function initializeFile() {
   }
 }
 
-app.delete("/api/employees/:id", async (req, res) => {
-  try {
-    const employeeId = req.params.id;
-    const fileData = await fsPromises.readFile(filePath, "utf-8");
-    const data = JSON.parse(fileData);
-    const updatedEmployees = data.filter((emp) => emp.id !== employeeId);
+app.post("/api/generate-schedule", async (req, res) => {
+  const { weekStart, employees, rules } = req.body;
+  console.log("Generating schedule with weekStart:", weekStart);
 
+  try {
+    const prompt = buildSchedulingPrompt(employees, weekStart);
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4", // Use gpt-4 for better compliance with complex instructions
+      messages: [
+        {
+          role: "system",
+          content: "You are a scheduling assistant AI.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.3,
+    });
+
+    const reply = response.choices[0].message.content;
+
+    let parsedSchedule;
+    try {
+      parsedSchedule = JSON.parse(reply);
+    } catch (jsonError) {
+      console.error("Invalid JSON returned from OpenAI:", reply);
+      return res
+        .status(500)
+        .json({ message: "Invalid schedule format received from AI." });
+    }
+
+    // Optional: Write to file
     await fsPromises.writeFile(
-      filePath,
-      JSON.stringify(updatedEmployees, null, 2)
+      eventsFilePath,
+      JSON.stringify(parsedSchedule, null, 2)
     );
-    res.status(200).json({ message: "Employee deleted successfully." });
+
+    res.json({ events: parsedSchedule });
   } catch (err) {
-    console.error("Error deleting employee:", err);
-    res.status(500).json({ message: "Internal server error." });
+    console.error("Schedule Generation Error:", err);
+    res.status(500).json({ message: "Failed to generate schedule" });
   }
 });
-// --- API Endpoints ---
+
+// app.post("/api/generate-schedule", async (req, res) => {
+//   const { weekStart, employees, rules } = req.body;
+//   console.log("Generating schedule with weekStart:", weekStart);
+
+//   try {
+//     const weekStartDate = new Date(weekStart);
+//     const employeeMap = new Map();
+
+//     for (let i = 0; i < 7; i++) {
+//       const currentDate = new Date(weekStartDate);
+//       currentDate.setDate(weekStartDate.getDate() + i);
+//       const dateString = currentDate.toISOString().split("T")[0];
+
+//       const slotTracker = { primary: {}, evening: {} };
+
+//       // const assignAbilitySlot = (abilityName) => {
+//       //   for (const shiftName of ["primary", "evening"]) {
+//       //     const shift = rules.coverage[shiftName];
+//       //     const required = shift.requirements[abilityName];
+//       //     if (!required) continue;
+
+//       //     const current = slotTracker[shiftName][abilityName] || 0;
+//       //     if (current < required) {
+//       //       slotTracker[shiftName][abilityName] = current + 1;
+//       //       return {
+//       //         start: shift.start,
+//       //         end: shift.end,
+//       //         shift: shiftName,
+//       //         date: dateString,
+//       //       };
+//       //     }
+//       //   }
+//       //   return null;
+//       // };
+//       const assignAbilitySlot = (abilityName) => {
+//         for (const shiftName of ["primary", "evening"]) {
+//           const shift = rules.coverage[shiftName];
+//           const required = shift.requirements[abilityName];
+//           if (!required) continue;
+
+//           const current = slotTracker[shiftName][abilityName] || 0;
+//           if (current < required) {
+//             slotTracker[shiftName][abilityName] = current + 1;
+//             const lunch = rules.scheduleRules?.lunch?.[shiftName] || null;
+
+//             return {
+//               start: shift.start,
+//               end: shift.end,
+//               shift: shiftName,
+//               date: dateString,
+//               ...(lunch && { lunch }), // Attach lunch if defined
+//             };
+//           }
+//         }
+//         return null;
+//       };
+
+//       for (const emp of employees) {
+//         const userId = emp.id;
+//         const abilityArray = (emp.abilities || [])
+//           .map((ability) => {
+//             const base = {
+//               name: ability,
+//               userId,
+//               taskId: `${userId.split("-")[0]}-${ability
+//                 .toLowerCase()
+//                 .replace(/\s+/g, "-")}`,
+//             };
+//             const timeSlot = assignAbilitySlot(ability);
+//             return timeSlot ? { ...base, ...timeSlot } : null;
+//           })
+//           .filter(Boolean);
+
+//         if (!employeeMap.has(userId)) {
+//           employeeMap.set(userId, {
+//             ...emp,
+//             id: userId,
+//             abilities: [],
+//           });
+//         }
+
+//         // Merge today's abilities into existing employee
+//         const existing = employeeMap.get(userId);
+//         existing.abilities.push(...abilityArray);
+//       }
+//     }
+
+//     const mergedEmployees = Array.from(employeeMap.values());
+
+//     // Optional: Send to OpenAI for formatting or enhancements
+//     // (You can skip this if you're happy with the result)
+//     const response = await openai.chat.completions.create({
+//       model: "gpt-3.5-turbo",
+//       messages: [
+//         {
+//           role: "system",
+//           content: `
+//           You are a scheduling assistant AI.
+//           For each user, return an array of their tasks (abilities) with:
+//           - name
+//           - userId
+//           - taskId
+//           - start
+//           - end
+//           - shift
+//           - date (YYYY-MM-DD)
+//           `.trim(),
+//         },
+//         {
+//           role: "user",
+//           content: JSON.stringify(mergedEmployees),
+//         },
+//       ],
+//     });
+//     res.json({ events: mergedEmployees });
+//   } catch (err) {
+//     console.error("Schedule Generation Error:", err);
+//     res.status(500).json({ message: "Failed to generate schedule" });
+//   }
+// });
+//   const { weekStart, employees, rules } = req.body;
+//   console.log("Generating schedule with weekStart:", weekStart);
+
+//   try {
+//     // Track how many slots filled per shift per ability
+//     const slotTracker = { primary: {}, evening: {} };
+
+//     const assignAbilitySlot = (abilityName) => {
+//       for (const shiftName of ["primary", "evening"]) {
+//         const shift = SCHEDULING_RULES.coverage[shiftName];
+//         const required = shift.requirements[abilityName];
+//         if (!required) continue;
+
+//         const current = slotTracker[shiftName][abilityName] || 0;
+//         if (current < required) {
+//           slotTracker[shiftName][abilityName] = current + 1;
+//           return {
+//             start: shift.start,
+//             end: shift.end,
+//             shift: shiftName,
+//           };
+//         }
+//       }
+//       return null; // No slot available
+//     };
+
+//     // STEP 1: Transform employees and assign slot times
+//     const scheduledEmployees = employees.map((emp, index) => {
+//       const userId = emp.id || `user-${index}`;
+//       const abilityArray = (emp.abilities || []).map((ability) => {
+//         const base = {
+//           name: ability,
+//           userId,
+//           taskId: `${userId.split("-")[0]}-${ability
+//             .toLowerCase()
+//             .replace(/\s+/g, "-")}`,
+//         };
+//         const timeSlot = assignAbilitySlot(ability);
+//         return timeSlot ? { ...base, ...timeSlot } : base;
+//       });
+
+//       return {
+//         ...emp,
+//         id: userId,
+//         abilities: abilityArray,
+//       };
+//     });
+//     // STEP 2: Call OpenAI to generate schedule
+//     const response = await openai.chat.completions.create({
+//       model: "gpt-3.5-turbo",
+//       messages: [
+//         {
+//           role: "system",
+//           content: `
+//           You are a scheduling assistant AI.
+//           For each user provided, return a new user object with the same fields as input.
+//           But convert their 'abilities' field into an array of objects. Each object should contain:
+//           - 'name': the ability name
+//           - 'userId': from the original user object
+//           - 'taskId': string formatted as 'userId-lowercased-ability'
+//           - 'start': the start time of their assigned shift
+//           - 'end': the end time of their assigned shift
+//           - 'shift': either 'primary' or 'evening' based on their assigned shift
+//           Return clean valid JSON. Do not wrap in backticks or markdown.
+//           `.trim(),
+//         },
+//         {
+//           role: "user",
+//           content: JSON.stringify(scheduledEmployees),
+//         },
+//       ],
+//     });
+//     res.json({ events: scheduledEmployees });
+//   } catch (err) {
+//     console.error("Schedule Generation Error:", err);
+//     res.status(500).json({ message: "Failed to generate schedule" });
+//   }
+// });
+
+// app.post("/api/generate-schedule", async (req, res) => {
+//   const { weekStart, employees, rules } = req.body;
+//   console.log("Generating schedule with weekStart:", weekStart);
+
+//   try {
+//     // STEP 1: Normalize and transform employees
+//     const transformedEmployees = employees.map((emp, index) => {
+//       const userId = emp.id || `user-${index}`;
+//       const abilityArray = (emp.abilities || []).map((ability) => ({
+//         name: ability,
+//         userId,
+//         taskId: `${userId.split("-")[0]}-${ability
+//           .toLowerCase()
+//           .replace(/\s+/g, "-")}`,
+//       }));
+
+//       return {
+//         ...emp,
+//         id: userId,
+//         abilities: abilityArray,
+//       };
+//     });
+
+//     // STEP 2: Call OpenAI
+//     const response = await openai.chat.completions.create({
+//       model: "gpt-3.5-turbo",
+//       messages: [
+//         {
+//           role: "system",
+//           content: `
+//       You are a data transformer AI.
+
+//       For each user provided, return a new user object with the same fields as input.
+//       But convert their 'abilities' field into an array of objects. Each object should contain:
+//       - 'name': the ability name
+//       - 'userId': from the original user object
+//       - 'taskId': string formatted as 'userId-lowercased-ability' (spaces replaced with dashes)
+
+//       Return clean valid JSON. Do not wrap in backticks or markdown.
+//   `.trim(),
+//         },
+//         {
+//           role: "user",
+//           content: JSON.stringify(employees),
+//         },
+//       ],
+//     });
+
+//     // STEP 3: Handle AI response
+//     const messageContent = response.choices[0].message.content;
+//     const cleaned = messageContent.replace(/```json|```/g, "").trim();
+//     const parsed = JSON.parse(cleaned);
+
+//     // console.log("Parsed Result:", JSON.stringify(parsed, null, 2));
+//     res.json({ events: parsed});
+//   } catch (err) {
+//     console.error("ChatGPT Schedule Error:", err);
+//     res.status(500).json({ message: "Failed to generate schedule from AI" });
+//   }
+// });
+
 // --- NEW: Chat Endpoint ---
 app.post("/api/chat", async (req, res) => {
   const { prompt } = req.body;
@@ -127,83 +507,6 @@ app.post("/api/chat", async (req, res) => {
   } catch (error) {
     console.error("Error calling OpenAI API:", error);
     res.status(500).json({ error: "Failed to get response from AI." });
-  }
-});
-
-app.post("/api/user", async (req, res) => {
-  try {
-    const {
-      name,
-      email,
-      shift,
-      lunch,
-      hours,
-      abilities,
-      specialistTask,
-      pto,
-      specialistTarget,
-    } = req.body;
-
-    console.log("Received user data:", req.body);
-
-    // Generate a unique ID for the new user
-    const id = uuidv4();
-    // console.log("UUID generated:", id);
-
-    const newUser = {
-      id,
-      name,
-      email,
-      shift,
-      lunch,
-      hours,
-      abilities,
-      specialistTask,
-      pto,
-      specialistTarget,
-    };
-
-    try {
-      await initializeFile();
-
-      const fileContent = await fsPromises.readFile(filePath, "utf8");
-      let currentEmployees = JSON.parse(fileContent);
-
-      currentEmployees.push(newUser);
-
-      // Write updated data back to file
-      const updatedContent = JSON.stringify(currentEmployees, null, 2);
-      // await fsPromises.writeFile(filePath, updatedContent);
-      await fsPromises.writeFile(
-        filePath,
-        JSON.stringify(updatedContent, null, 2)
-      );
-
-      console.log(`✅ User ${name || "Unnamed"} added successfully to file`);
-
-      return res.status(201).json({
-        message: "User added successfully",
-        user: newUser,
-      });
-    } catch (fileError) {
-      console.error("❌ Error writing to file:", fileError);
-      console.error("❌ File error details:", {
-        code: fileError.code,
-        message: fileError.message,
-        path: fileError.path,
-      });
-
-      return res.status(500).json({
-        message: "Failed to save user to file",
-        error: fileError.message,
-      });
-    }
-  } catch (error) {
-    console.error("❌ Error adding user:", error);
-    return res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
   }
 });
 
@@ -238,21 +541,158 @@ app.get("/api/employees", async (req, res) => {
   }
 });
 
+app.post("/api/employees", async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      shift,
+      lunch,
+      hours,
+      abilities,
+      specialistTask,
+      schedulingNotes,
+      pto,
+      specialistTarget,
+    } = req.body;
+
+    const id = uuidv4();
+
+    const newUser = {
+      id,
+      name,
+      email,
+      shift,
+      lunch,
+      hours,
+      abilities,
+      specialistTask,
+      schedulingNotes,
+      pto,
+      specialistTarget,
+    };
+
+    try {
+      await initializeFile();
+
+      const fileContent = await fsPromises.readFile(filePath, "utf8");
+      let currentEmployees = JSON.parse(fileContent);
+      currentEmployees.push(newUser);
+      const updatedContent = JSON.stringify(currentEmployees, null, 2);
+      await fsPromises.writeFile(filePath, updatedContent);
+      console.log(`✅ User ${name || "Unnamed"} added successfully to file`);
+
+      return res.status(201).json({
+        message: "User added successfully",
+        user: newUser,
+      });
+    } catch (fileError) {
+      console.error("❌ Error writing to file:", fileError);
+      console.error("❌ File error details:", {
+        code: fileError.code,
+        message: fileError.message,
+        path: fileError.path,
+      });
+
+      return res.status(500).json({
+        message: "Failed to save user to file",
+        error: fileError.message,
+      });
+    }
+  } catch (error) {
+    console.error("❌ Error adding user:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+});
+
 app.patch("/api/employees", async (req, res) => {
   try {
-    const updatedEmployees = req.body;
-    currentEmployees = updatedEmployees;
+    const {
+      id,
+      name,
+      email,
+      shift,
+      lunch,
+      hours,
+      abilities,
+      specialistTask,
+      schedulingNotes,
+      pto,
+      specialistTarget,
+    } = req.body;
 
-    // Write to file
+    const newUser = {
+      id,
+      name,
+      email,
+      shift,
+      lunch,
+      hours,
+      abilities,
+      specialistTask,
+      schedulingNotes,
+      pto,
+      specialistTarget,
+    };
+
+    try {
+      await initializeFile();
+
+      const fileContent = await fsPromises.readFile(filePath, "utf8");
+      let currentEmployees = JSON.parse(fileContent);
+
+      // Find the index of the employee with the matching id
+      const employeeIndex = currentEmployees.findIndex((emp) => emp.id === id);
+
+      if (employeeIndex === -1) {
+        return res.status(404).json({ message: "Employee not found." });
+      }
+
+      // Update the existing employee data at the found index
+      currentEmployees[employeeIndex] = newUser;
+
+      // Write updated data back to the file
+      const updatedContent = JSON.stringify(currentEmployees, null, 2);
+      await fsPromises.writeFile(filePath, updatedContent);
+
+      console.log(`✅ User ${name || "Unnamed"} updated successfully in file`);
+
+      return res.status(200).json({
+        message: "User updated successfully",
+        user: newUser,
+      });
+    } catch (fileError) {
+      console.error("❌ Error writing to file:", fileError);
+      console.error("❌ File error details:", {
+        code: fileError.code,
+        message: fileError.message,
+        path: fileError.path,
+      });
+      return res.status(500).json({ message: "Failed to write to file." });
+    }
+  } catch (error) {
+    console.error("Error updating employees:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+});
+
+app.delete("/api/employees/:id", async (req, res) => {
+  try {
+    const employeeId = req.params.id;
+    const fileData = await fsPromises.readFile(filePath, "utf-8");
+    const data = JSON.parse(fileData);
+    const updatedEmployees = data.filter((emp) => emp.id !== employeeId);
+
     await fsPromises.writeFile(
       filePath,
       JSON.stringify(updatedEmployees, null, 2)
     );
-
-    console.log("Employees updated in file and memory");
-    res.status(200).json({ message: "Employees updated successfully." });
-  } catch (error) {
-    console.error("Error updating employees:", error);
+    res.status(200).json({ message: "Employee deleted successfully." });
+  } catch (err) {
+    console.error("Error deleting employee:", err);
     res.status(500).json({ message: "Internal server error." });
   }
 });
@@ -261,6 +701,12 @@ app.get("/api/rules", (req, res) => res.status(200).json(currentRules));
 app.post("/api/rules", (req, res) => {
   currentRules = req.body;
   res.status(200).json({ message: "Rules updated successfully." });
+});
+
+app.delete("/api/task", async (req, res) => {
+  const Eventid = req.params.id;
+  const fileData = await fsPromises.readFile(filePath, "utf-8");
+  const data = JSON.parse(fileData);
 });
 
 async function fetchCalendarEvents(calendarId, timeMin, timeMax) {
