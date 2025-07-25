@@ -248,21 +248,22 @@ export default function App() {
         });
 
         const result = await response.json();
-        console.log("Result:", result);
         if (response.ok) {
           const addedUser = result.user;
           setEmployees([...employees, addedUser]);
-          console.log("✅ User added successfully:", result.message);
+          console.log("✅ User added successfully:", addedUser);
 
           const scheduleResponse = await fetch("/api/generate-schedule", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              weekStart: weekStart.toISOString(), // Your logic to get current week's Monday
-              employees: [addedUser], // Only the new employee
-              rules: [], // Or provide existing rules logic if needed
+              weekStart: weekStart.toISOString(), 
+              employees: [addedUser], 
+              rules: [],
             }),
           });
+          console.log("response", scheduleResponse);
+          
 
           const scheduleResult = await scheduleResponse.json();
           if (!scheduleResponse.ok) {
@@ -283,8 +284,6 @@ export default function App() {
       await handleEditEmployee(employeeData);
       setEditingEmployee(false);
     }
-    // This still shows the form with empty fields for further editing
-
     setEditingEmployee(null);
   };
 

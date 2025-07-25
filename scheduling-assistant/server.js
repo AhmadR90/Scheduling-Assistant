@@ -15,19 +15,22 @@ const __dirname = path.dirname(__filename);
 
 const filePath = path.join(__dirname, "src/data/initialEmployees.json");
 const eventsFilePath = path.join(__dirname, "public", "events.json");
-// const INITIAL_EMPLOYEES = JSON.parse(fs.readFile(filePath, "utf-8"));
+
 async function loadInitialEmployees() {
   const fileData = await fsPromises.readFile(filePath, "utf-8");
   return JSON.parse(fileData);
 }
 
-const INITIAL_EMPLOYEES = await loadInitialEmployees(); // or use it inside a route/controller
+const INITIAL_EMPLOYEES = await loadInitialEmployees(); 
 
 import { SCHEDULING_RULES } from "./src/data/schedulingRules.js";
 
 const buildSchedulingPrompt = (employees, weekStartDate) => {
   return `
 You are a smart scheduling assistant.Generate a detailed 7-day weekly schedule from ${weekStartDate} (Monday) to Sunday based on the following employees and hard scheduling rules.
+**Please generate schedule for each employee and for complete week of 7 days.**
+**Don't skip saturday and sunday.**
+**Must generate for saturday and sunday.**
 
 ### EMPLOYEES:
 ${employees
@@ -52,13 +55,13 @@ Employee ${idx + 1}:
 ### ABSOLUTE RULES TO FOLLOW (NO EXCEPTIONS):
 
 1. *Exact Daily Coverage (08:00-17:00)*:
-   - EXACTLY 3 people on Reservations
-   - EXACTLY 1 person on Dispatch
-   - NEVER assign more than 3 people to Reservations during this time
+   - EXACTLY **3 people on Reservations**
+   - EXACTLY **1 person on Dispatch**
+   - **NEVER assign **more than 3 people** to Reservations during this time**
 
 2. *Evening Coverage (17:00+)*:
-   - Goal: 3 Reservations + 1 Dispatch
-   - Minimum: 2 Reservations + 1 Dispatch
+   - Goal: **3 Reservations + 1 Dispatch**
+   - Minimum: **2 Reservations + 1 Dispatch**
 
 3. *Dispatch Continuity*:
    - Dispatch must be staffed continuously during ALL operational hours, including lunch
@@ -114,7 +117,7 @@ Each event must:
 - Include specialist time (if any) labeled as their specialist task
 - Respect all role/lunch/time restrictions
 
-Output only valid JSON array — no commentary.
+Output only **valid strict JSON array** — no commentary.
   `;
 };
 
@@ -189,11 +192,9 @@ app.post("/api/generate-schedule", async (req, res) => {
   console.log("Generating schedule with weekStart:", weekStart);
 
   try {
-    console.log("1")
     const prompt = buildSchedulingPrompt(employees, weekStart);
-console.log("2")
     const response = await openai.chat.completions.create({
-      model: "gpt-4", // Use gpt-4 for better compliance with complex instruction
+      model: "gpt-4", 
       messages: [
         {
           role: "system",
@@ -206,34 +207,32 @@ console.log("2")
       ],
       temperature: 0.3,
     });
-    console.log("Response",response)
     const reply = response.choices[0].message.content;
-    console.log("reply", reply);
     let parsedSchedule;
     try {
       parsedSchedule = JSON.parse(reply);
+      console.log("parsed", parsedSchedule);
     } catch (jsonError) {
       console.error("Invalid JSON returned from OpenAI:", reply);
       return res
         .status(500)
         .json({ message: "Invalid schedule format received from AI." });
     }
+    const eventContent = await fsPromises.readFile(eventsFilePath, "utf8");
+    const events = JSON.parse(eventContent);
+    for (const obj of parsedSchedule) {
+      events.push(obj);
+    }
 
-    // Optional: Write to file
-    await fsPromises.writeFile(
-      eventsFilePath,
-      JSON.stringify(parsedSchedule, null, 2)
-    );
-
+    const updatedContent = JSON.stringify(events, null, 2);
+    await fsPromises.writeFile(eventsFilePath, updatedContent);
+    console.log(`✅ Schedule  added successfully to file`);
     res.json({ events: parsedSchedule });
   } catch (err) {
     console.error("Schedule Generation Error:", err);
     res.status(500).json({ message: "Failed to generate schedule" });
   }
 });
-
-//EVENTS ENDPOINTS
-
 app.delete("/api/delete-task", (req, res) => {
   const { employeId, taskId } = req.body;
   if (!employeId || !taskId) {
