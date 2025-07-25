@@ -238,29 +238,5 @@
     "specialistTask": "Sales",
     "specialistTarget": 5,
     "pto": []
-  },
-  {
-    "id": "801b22ff-a861-4a66-a779-d24c703d9e39",
-    "name": "Ahmad",
-    "email": "Raza@gmail.com",
-    "shift": {
-      "start": "09:00",
-      "end": "17:00"
-    },
-    "lunch": {
-      "start": "12:00",
-      "end": "13:00"
-    },
-    "hours": 40,
-    "abilities": [
-      "Reservations",
-      "Dispatch",
-      "Security",
-      "Marketing"
-    ],
-    "specialistTask": "",
-    "schedulingNotes": "",
-    "pto": [],
-    "specialistTarget": 0
   }
 ]
