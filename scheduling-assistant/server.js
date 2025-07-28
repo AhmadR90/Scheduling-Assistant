@@ -9,6 +9,8 @@ import fsPromises from "fs/promises";
 import { fileURLToPath } from "url";
 import { google } from "googleapis";
 import OpenAI from "openai";
+import { buildSchedulingPrompt } from "./Utils/prompt.js";
+import {extractCleanJsonFromAiReply} from "./Utils/ResponseCleaner.js"
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,105 +23,9 @@ async function loadInitialEmployees() {
   return JSON.parse(fileData);
 }
 
-const INITIAL_EMPLOYEES = await loadInitialEmployees(); 
+const INITIAL_EMPLOYEES = await loadInitialEmployees();
 
 import { SCHEDULING_RULES } from "./src/data/schedulingRules.js";
-
-const buildSchedulingPrompt = (employees, weekStartDate) => {
-  return `
-You are a smart scheduling assistant.Generate a detailed 7-day weekly schedule from ${weekStartDate} (Monday) to Sunday based on the following employees and hard scheduling rules.
-**Please generate schedule for each employee and for complete week of 7 days.**
-**Don't skip saturday and sunday.**
-**Must generate for saturday and sunday.**
-
-### EMPLOYEES:
-${employees
-  .map((emp, idx) => {
-    return `
-Employee ${idx + 1}:
-- Name: ${emp.name}
-- ID: ${emp.id}
-- Email: ${emp.email}
-- Total Weekly Hours: ${emp.hours}
-- Shift: ${emp.shift.start} to ${emp.shift.end}
-- Lunch: ${emp.lunch.start} to ${emp.lunch.end}
-- Abilities: ${emp.abilities.join(", ") || "None"}
-- Specialist Task: ${emp.specialistTask || "None"}
-- Specialist Target Hours: ${emp.specialistTarget || 0}
-- PTO: ${emp.pto?.length > 0 ? JSON.stringify(emp.pto) : "None"}
-- Message: ${emp.message || "None"}
-`;
-  })
-  .join("\n")}
-
-### ABSOLUTE RULES TO FOLLOW (NO EXCEPTIONS):
-
-1. *Exact Daily Coverage (08:00-17:00)*:
-   - EXACTLY **3 people on Reservations**
-   - EXACTLY **1 person on Dispatch**
-   - **NEVER assign **more than 3 people** to Reservations during this time**
-
-2. *Evening Coverage (17:00+)*:
-   - Goal: **3 Reservations + 1 Dispatch**
-   - Minimum: **2 Reservations + 1 Dispatch**
-
-3. *Dispatch Continuity*:
-   - Dispatch must be staffed continuously during ALL operational hours, including lunch
-   - Never allow a time slot with no Dispatch person
-
-4. *Lunch Rules*:
-   - EVERY employee must receive a lunch break
-   - Acceptable lunch windows for Greenville staff:
-     • 11:00-12:30 ET
-     • 12:00-13:30 ET
-     • 12:30-14:00 ET
-     • NO lunch breaks after 15:00 unless specified
-   - Exception: Katy (Reno) can have lunch from 15:00-16:00
-   - DO NOT drop below 3 Reservations + 1 Dispatch during lunch slots
-
-5. *Scheduling Hierarchy (in priority order)*:
-   1. EXACT coverage (3 Reservations + 1 Dispatch from 08:00–17:00)
-   2. DISPATCH continuity (including lunch)
-   3. LUNCH compliance (everyone gets one, in allowed window)
-   4. EVENING coverage (17:00+ goal: 3 Reservations + 1 Dispatch, minimum: 2 + 1)
-   5. EMPLOYEE hour totals must match exactly
-   6. SPECIALIST hours only after all other rules satisfied
-
-6. *Preferences & Availability*:
-   - Respect employee “message” field (e.g., “not available on Tuesday after 4PM” or “prefers marketing on Tuesdays”)
-   - Do your best to accommodate preferences if coverage rules are still met
-
-### REQUIRED OUTPUT FORMAT:
-Return an array of JSON events like this:
-[
-  {
-    "employeeId": "UUID",
-    "title": "Reservations",
-    taskId: "UUID-Reservations",
-    date: "2025-07-22",
-    "start": "2025-07-22T08:00:00",
-    "end": "2025-07-22T12:00:00"
-  },
-  {
-    "employeeId": "UUID",
-    "title": "Lunch",
-    taskId: "UUID-Lunch",
-    date: "2025-07-22",
-    "start": "2025-07-22T12:00:00",
-    "end": "2025-07-22T13:00:00"
-  },
-  ...
-]
-
-Each event must:
-- Match employee hours exactly (sum total = target hours)
-- Reflect lunch breaks as “Lunch”
-- Include specialist time (if any) labeled as their specialist task
-- Respect all role/lunch/time restrictions
-
-Output only **valid strict JSON array** — no commentary.
-  `;
-};
 
 // --- Environment and Credential Checks ---
 if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
@@ -194,7 +100,7 @@ app.post("/api/generate-schedule", async (req, res) => {
   try {
     const prompt = buildSchedulingPrompt(employees, weekStart);
     const response = await openai.chat.completions.create({
-      model: "gpt-4", 
+      model: "gpt-4",
       messages: [
         {
           role: "system",
@@ -208,23 +114,27 @@ app.post("/api/generate-schedule", async (req, res) => {
       temperature: 0.3,
     });
     const reply = response.choices[0].message.content;
+    const Correct=extractCleanJsonFromAiReply(reply)
+    console.error("reply", Correct);
     let parsedSchedule;
     try {
-      parsedSchedule = JSON.parse(reply);
+      parsedSchedule = JSON.parse(Correct);
       console.log("parsed", parsedSchedule);
     } catch (jsonError) {
-      console.error("Invalid JSON returned from OpenAI:", reply);
+   
       return res
         .status(500)
         .json({ message: "Invalid schedule format received from AI." });
     }
     const eventContent = await fsPromises.readFile(eventsFilePath, "utf8");
     const events = JSON.parse(eventContent);
+
     for (const obj of parsedSchedule) {
       events.push(obj);
     }
 
     const updatedContent = JSON.stringify(events, null, 2);
+    console.log("Updated Content", updatedContent);
     await fsPromises.writeFile(eventsFilePath, updatedContent);
     console.log(`✅ Schedule  added successfully to file`);
     res.json({ events: parsedSchedule });
@@ -233,6 +143,54 @@ app.post("/api/generate-schedule", async (req, res) => {
     res.status(500).json({ message: "Failed to generate schedule" });
   }
 });
+
+app.post("/api/generate-schedule-multiple", async (req, res) => {
+  const { weekStart, employees, rules } = req.body;
+  console.log("Generating schedule with weekStart:", weekStart);
+
+  try {
+    const prompt = buildSchedulingPrompt(employees, weekStart);
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4", 
+      messages: [
+        {
+          role: "system",
+          content: "You are a scheduling assistant AI.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.3,
+    });
+
+    const reply = response.choices[0].message.content;
+
+    let parsedSchedule;
+    try {
+      parsedSchedule = JSON.parse(reply);
+    } catch (jsonError) {
+      console.error("Invalid JSON returned from OpenAI:", reply);
+      return res
+        .status(500)
+        .json({ message: "Invalid schedule format received from AI." });
+    }
+
+    // Write to file
+    await fsPromises.writeFile(
+      eventsFilePath,
+      JSON.stringify(parsedSchedule, null, 2)
+    );
+
+    res.json({ events: parsedSchedule });
+  } catch (err) {
+    console.error("Schedule Generation Error:", err);
+    res.status(500).json({ message: "Failed to generate schedule" });
+  }
+});
+
 app.delete("/api/delete-task", (req, res) => {
   const { employeId, taskId } = req.body;
   if (!employeId || !taskId) {
@@ -271,7 +229,6 @@ app.delete("/api/delete-task", (req, res) => {
 
 app.put("/api/update-task", async (req, res) => {
   const { employeeId, taskId, title, start, end } = req.body;
-  console.log("data", employeeId, taskId, title, start, end);
   if (!employeeId || !taskId) {
     return res.status(400).json({ message: "empId and taskId are required" });
   }
@@ -279,7 +236,7 @@ app.put("/api/update-task", async (req, res) => {
   try {
     const rawData = await fsPromises.readFile(eventsFilePath);
     const events = JSON.parse(rawData);
-    console.log("Events", events);
+
     let updated = false;
 
     const updatedEvents = events.map((event) => {

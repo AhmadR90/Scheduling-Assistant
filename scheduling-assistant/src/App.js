@@ -6,6 +6,7 @@ import AdminPanel from "./AdminPanel.js";
 import Chatbot from "./Chatbot.js";
 import EventEditor from "./EventEditor.js"; // <-- This line was missing
 import "./App.css";
+import { startOfWeek } from 'date-fns';
 
 export default function App() {
   const [view, setView] = useState("scheduler");
@@ -13,7 +14,7 @@ export default function App() {
   const [employees, setEmployees] = useState({});
   const [rules, setRules] = useState({});
   const [scheduleEvents, setScheduleEvents] = useState([]);
-  const [weekStart, setWeekStart] = useState(getStartOfWeek(new Date()));
+  const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -235,7 +236,7 @@ export default function App() {
       specialistTask: employeeData.specialistTask || "",
       schedulingNotes: employeeData.schedulingNotes || "",
       pto: employeeData.pto || [],
-      specialistTarget: employeeData.specialistTarget || 0, // Default for new employee
+      specialistTarget: employeeData.specialistTarget || 0, 
     };
     if (!isEditingEmployee) {
       try {

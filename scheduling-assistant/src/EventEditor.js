@@ -28,23 +28,6 @@ export default function EventEditor({
     "Scheduling",
     "Badges/Projects",
   ];
-  // useEffect(() => {
-  //   if (event) {
-  //     const formatDateTime = (date) => {
-  //       if (!date) return "";
-  //       const d = new Date(date);
-  //       return d.toISOString().slice(0, 19); // YYYY-MM-DDTHH:mm:ss
-  //     };
-
-  //     setFormData({
-  //       empId: event._def.resourceIds,
-  //       taskId: event._def.extendedProps.taskId,
-  //       title: event.title,
-  //       start: formatDateTime(event.start),
-  //       end: formatDateTime(event.end),
-  //     });
-  //   }
-  // }, [event]);
   useEffect(() => {
     if (event) {
       const extractTime = (isoString) => {
@@ -68,7 +51,7 @@ export default function EventEditor({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
   const handleSave = () => {
-    const dateStr = new Date(event.start).toISOString().split("T")[0]; // "2025-07-20"
+    const dateStr = new Date(event.start).toISOString().split("T")[0];
 
     const startISO = `${dateStr}T${formData.start}:00`;
     const endISO = `${dateStr}T${formData.end}:00`;

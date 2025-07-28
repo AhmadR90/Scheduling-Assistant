@@ -102,6 +102,73 @@ export default function SchedulerApp({
     fetchGeneratedSchedule();
   }, [weekStart, employees, rules, onEventsGenerated, emailToEmployeeMap]);
 
+//   useEffect(() => {
+//   const fetchGeneratedSchedule = async () => {
+//     if (!rules?.coverage || Object.keys(employees).length === 0) return;
+
+//     setIsLoading(true);
+
+//     try {
+//       const startDate = new Date(weekStart);
+//       const endDate = new Date(startDate);
+//       endDate.setDate(startDate.getDate() + 7);
+
+//     
+//       const scheduleRes = await fetch("/api/generate-schedule-multiple", {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json",
+//         },
+//         body: JSON.stringify({
+//           weekStart,
+//           employees,
+//           rules,
+//         }),
+//       });
+
+//       if (!scheduleRes.ok) {
+//         throw new Error("Failed to generate schedule");
+//       }
+
+//       const { events: result } = await scheduleRes.json();
+
+//       const fullCalendarEvents = [];
+
+//       for (const emp of result) {
+//         const empName = Object.values(employees).find(
+//           (e) => e.id === emp.employeeId
+//         )?.name;
+
+//         if (!empName) continue;
+
+//         fullCalendarEvents.push({
+//           id: `${emp.taskId}-${emp.start}`,
+//           resourceId: emp.employeeId,
+//           title: emp.title,
+//           start: emp.start,
+//           end: emp.end,
+//           backgroundColor: getTaskColor(emp.title),
+//           borderColor: getTaskColor(emp.title),
+//           extendedProps: {
+//             email: emp.email || "",
+//             userName: empName,
+//             taskId: emp.taskId || null,
+//             shift: emp.shift || null,
+//           },
+//         });
+//       }
+
+//       onEventsGenerated(fullCalendarEvents);
+//     } catch (error) {
+//       console.error("Error fetching AI-generated schedule:", error);
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+//   fetchGeneratedSchedule();
+// }, [weekStart, employees, rules, onEventsGenerated]);
+
   return (
     <div className="scheduler-container">
       {isLoading && (
