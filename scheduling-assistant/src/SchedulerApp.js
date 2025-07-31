@@ -5,7 +5,6 @@ import resourceTimelinePlugin from "@fullcalendar/resource-timeline";
 import interactionPlugin from "@fullcalendar/interaction";
 import "./App.css";
 
-
 const timeToMinutes = (time) => {
   if (!time) return 0;
   const [hours, minutes] = time.split(":").map(Number);
@@ -17,7 +16,6 @@ const minutesToTime = (minutes) => {
   const m = minutes % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
-
 
 export default function SchedulerApp({
   employees,
@@ -62,6 +60,19 @@ export default function SchedulerApp({
           `/api/events?start=${startDate.toISOString()}&end=${endDate.toISOString()}`
         );
         const externalEventsRaw = await extEventRes.json();
+        const internalFormatGoogleEvents = convertGoogleEventsToInternalFormat(
+          externalEventsRaw,
+          employees
+        );
+
+        console.log("Converted Google Events:", internalFormatGoogleEvents);
+        await fetch("/api/save-google-events", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(internalFormatGoogleEvents),
+        });
 
         const response = await fetch("/events.json");
         const result = await response.json();
@@ -102,72 +113,72 @@ export default function SchedulerApp({
     fetchGeneratedSchedule();
   }, [weekStart, employees, rules, onEventsGenerated, emailToEmployeeMap]);
 
-//   useEffect(() => {
-//   const fetchGeneratedSchedule = async () => {
-//     if (!rules?.coverage || Object.keys(employees).length === 0) return;
+  //   useEffect(() => {
+  //   const fetchGeneratedSchedule = async () => {
+  //     if (!rules?.coverage || Object.keys(employees).length === 0) return;
 
-//     setIsLoading(true);
+  //     setIsLoading(true);
 
-//     try {
-//       const startDate = new Date(weekStart);
-//       const endDate = new Date(startDate);
-//       endDate.setDate(startDate.getDate() + 7);
+  //     try {
+  //       const startDate = new Date(weekStart);
+  //       const endDate = new Date(startDate);
+  //       endDate.setDate(startDate.getDate() + 7);
 
-//     
-//       const scheduleRes = await fetch("/api/generate-schedule-multiple", {
-//         method: "POST",
-//         headers: {
-//           "Content-Type": "application/json",
-//         },
-//         body: JSON.stringify({
-//           weekStart,
-//           employees,
-//           rules,
-//         }),
-//       });
+  //
+  //       const scheduleRes = await fetch("/api/generate-schedule-multiple", {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //         body: JSON.stringify({
+  //           weekStart,
+  //           employees,
+  //           rules,
+  //         }),
+  //       });
 
-//       if (!scheduleRes.ok) {
-//         throw new Error("Failed to generate schedule");
-//       }
+  //       if (!scheduleRes.ok) {
+  //         throw new Error("Failed to generate schedule");
+  //       }
 
-//       const { events: result } = await scheduleRes.json();
+  //       const { events: result } = await scheduleRes.json();
 
-//       const fullCalendarEvents = [];
+  //       const fullCalendarEvents = [];
 
-//       for (const emp of result) {
-//         const empName = Object.values(employees).find(
-//           (e) => e.id === emp.employeeId
-//         )?.name;
+  //       for (const emp of result) {
+  //         const empName = Object.values(employees).find(
+  //           (e) => e.id === emp.employeeId
+  //         )?.name;
 
-//         if (!empName) continue;
+  //         if (!empName) continue;
 
-//         fullCalendarEvents.push({
-//           id: `${emp.taskId}-${emp.start}`,
-//           resourceId: emp.employeeId,
-//           title: emp.title,
-//           start: emp.start,
-//           end: emp.end,
-//           backgroundColor: getTaskColor(emp.title),
-//           borderColor: getTaskColor(emp.title),
-//           extendedProps: {
-//             email: emp.email || "",
-//             userName: empName,
-//             taskId: emp.taskId || null,
-//             shift: emp.shift || null,
-//           },
-//         });
-//       }
+  //         fullCalendarEvents.push({
+  //           id: `${emp.taskId}-${emp.start}`,
+  //           resourceId: emp.employeeId,
+  //           title: emp.title,
+  //           start: emp.start,
+  //           end: emp.end,
+  //           backgroundColor: getTaskColor(emp.title),
+  //           borderColor: getTaskColor(emp.title),
+  //           extendedProps: {
+  //             email: emp.email || "",
+  //             userName: empName,
+  //             taskId: emp.taskId || null,
+  //             shift: emp.shift || null,
+  //           },
+  //         });
+  //       }
 
-//       onEventsGenerated(fullCalendarEvents);
-//     } catch (error) {
-//       console.error("Error fetching AI-generated schedule:", error);
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   };
+  //       onEventsGenerated(fullCalendarEvents);
+  //     } catch (error) {
+  //       console.error("Error fetching AI-generated schedule:", error);
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   };
 
-//   fetchGeneratedSchedule();
-// }, [weekStart, employees, rules, onEventsGenerated]);
+  //   fetchGeneratedSchedule();
+  // }, [weekStart, employees, rules, onEventsGenerated]);
 
   return (
     <div className="scheduler-container">
@@ -224,4 +235,37 @@ function getTaskColor(task) {
     default:
       return "#6c757d";
   }
+}
+function convertGoogleEventsToInternalFormat(googleEvents, employeesMap) {
+  const internalEvents = [];
+  console.log(
+    "Event IDs:",
+    googleEvents.map((event) => event.id)
+  );
+
+  const randomNum = Math.floor(100 + Math.random() * 900);
+  for (const event of googleEvents) {
+    if (!event.attendees || !event.attendees.length) continue;
+
+    for (const email of event.attendees) {
+      const employeeEntry = employeesMap.find((emp) => emp.email === email);
+
+      if (!employeeEntry) continue;
+
+      const employeeId = employeeEntry.id;
+      const date = new Date(event.start).toISOString().split("T")[0];
+      const taskId = `${event.id}`;
+      
+      internalEvents.push({
+        employeeId,
+        title: event.title,
+        taskId,
+        date,
+        start: new Date(event.start).toISOString().replace("Z", ""),
+        end: new Date(event.end).toISOString().replace("Z", ""),
+      });
+    }
+  }
+
+  return internalEvents;
 }

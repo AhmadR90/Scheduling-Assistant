@@ -10,14 +10,14 @@ import { fileURLToPath } from "url";
 import { google } from "googleapis";
 import OpenAI from "openai";
 import { buildSchedulingPrompt } from "./Utils/prompt.js";
-import {extractCleanJsonFromAiReply} from "./Utils/ResponseCleaner.js"
+import { extractCleanJsonFromAiReply } from "./Utils/ResponseCleaner.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const filePath = path.join(__dirname, "src/data/initialEmployees.json");
 const eventsFilePath = path.join(__dirname, "public", "events.json");
-
+const events = fsPromises.readFile(eventsFilePath, "utf-8");
 async function loadInitialEmployees() {
   const fileData = await fsPromises.readFile(filePath, "utf-8");
   return JSON.parse(fileData);
@@ -92,52 +92,107 @@ async function initializeFile() {
   }
 }
 
+// app.post("/api/generate-schedule", async (req, res) => {
+//   const { weekStart, employees, rules } = req.body;
+
+//   console.log("Generating schedule with weekStart:", weekStart);
+
+//   try {
+//     const prompt = buildSchedulingPrompt(employees, weekStart);
+//     const response = await openai.chat.completions.create({
+//       model: "gpt-4",
+//       messages: [
+//         {
+//           role: "system",
+//           content: "You are a scheduling assistant AI.",
+//         },
+//         {
+//           role: "user",
+//           content: prompt,
+//         },
+//       ],
+//       temperature: 0.3,
+//     });
+//     const reply = response.choices[0].message.content;
+//     const Correct=extractCleanJsonFromAiReply(reply)
+//     console.error("reply", Correct);
+//     let parsedSchedule;
+//     try {
+//       parsedSchedule = JSON.parse(Correct);
+//       console.log("parsed", parsedSchedule);
+//     } catch (jsonError) {
+
+//       return res
+//         .status(500)
+//         .json({ message: "Invalid schedule format received from AI." });
+//     }
+//     const eventContent = await fsPromises.readFile(eventsFilePath, "utf8");
+//     const events = JSON.parse(eventContent);
+
+//     for (const obj of parsedSchedule) {
+//       events.push(obj);
+//     }
+
+//     const updatedContent = JSON.stringify(events, null, 2);
+//     console.log("Updated Content", updatedContent);
+//     await fsPromises.writeFile(eventsFilePath, updatedContent);
+//     console.log(`✅ Schedule  added successfully to file`);
+//     res.json({ events: parsedSchedule });
+//   } catch (err) {
+//     console.error("Schedule Generation Error:", err);
+//     res.status(500).json({ message: "Failed to generate schedule" });
+//   }
+// });
+
 app.post("/api/generate-schedule", async (req, res) => {
-  const { weekStart, employees, rules } = req.body;
+  const { weekStart, employees, rules, externalEvents = [] } = req.body;
 
   console.log("Generating schedule with weekStart:", weekStart);
-
+  const fileContent = await fsPromises.readFile(eventsFilePath, "utf8");
+  const existingEvents = JSON.parse(fileContent || "[]");
   try {
-    const prompt = buildSchedulingPrompt(employees, weekStart);
+    const prompt = buildSchedulingPrompt(employees, weekStart, existingEvents);
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       messages: [
-        {
-          role: "system",
-          content: "You are a scheduling assistant AI.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
+        { role: "system", content: "You are a scheduling assistant AI." },
+        { role: "user", content: prompt },
       ],
       temperature: 0.3,
     });
     const reply = response.choices[0].message.content;
-    const Correct=extractCleanJsonFromAiReply(reply)
-    console.error("reply", Correct);
+    const cleaned = extractCleanJsonFromAiReply(reply);
+
     let parsedSchedule;
     try {
-      parsedSchedule = JSON.parse(Correct);
-      console.log("parsed", parsedSchedule);
+      parsedSchedule = JSON.parse(cleaned);
+      console.log("parsed AI schedule:", parsedSchedule);
     } catch (jsonError) {
-   
       return res
         .status(500)
         .json({ message: "Invalid schedule format received from AI." });
     }
+
+    // Step 3: Read existing events file
     const eventContent = await fsPromises.readFile(eventsFilePath, "utf8");
     const events = JSON.parse(eventContent);
 
+    // Step 4: Add AI-generated schedule
     for (const obj of parsedSchedule) {
       events.push(obj);
     }
 
+    // Step 5: Add external Google Calendar events (like PTO or meetings)
+    for (const event of externalEvents) {
+      events.push(event);
+    }
+
+    // Step 6: Write updated list to file
     const updatedContent = JSON.stringify(events, null, 2);
-    console.log("Updated Content", updatedContent);
     await fsPromises.writeFile(eventsFilePath, updatedContent);
-    console.log(`✅ Schedule  added successfully to file`);
-    res.json({ events: parsedSchedule });
+
+    console.log(`✅ Schedule + external events added to file.`);
+    res.json({ events: [...parsedSchedule, ...externalEvents] });
   } catch (err) {
     console.error("Schedule Generation Error:", err);
     res.status(500).json({ message: "Failed to generate schedule" });
@@ -152,7 +207,7 @@ app.post("/api/generate-schedule-multiple", async (req, res) => {
     const prompt = buildSchedulingPrompt(employees, weekStart);
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4", 
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
@@ -167,10 +222,10 @@ app.post("/api/generate-schedule-multiple", async (req, res) => {
     });
 
     const reply = response.choices[0].message.content;
-
+    const cleaned = extractCleanJsonFromAiReply(reply);
     let parsedSchedule;
     try {
-      parsedSchedule = JSON.parse(reply);
+      parsedSchedule = JSON.parse(cleaned);
     } catch (jsonError) {
       console.error("Invalid JSON returned from OpenAI:", reply);
       return res
@@ -303,6 +358,55 @@ app.get("/api/events", async (req, res) => {
     ]);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch calendar events" });
+  }
+});
+
+app.post("/api/save-google-events", async (req, res) => {
+  const newEvents = req.body;
+
+  if (!Array.isArray(newEvents)) {
+    return res
+      .status(400)
+      .json({ message: "Invalid data format. Expected an array." });
+  }
+
+  try {
+    let existingEvents = [];
+    if (fs.existsSync(eventsFilePath)) {
+      const fileContent = await fsPromises.readFile(eventsFilePath, "utf8");
+      existingEvents = JSON.parse(fileContent || "[]");
+    }
+
+    // Step 2: Create a Set of existing taskIds for quick lookup
+    const existingTaskIds = new Set(
+      existingEvents.map((event) => event.taskId)
+    );
+    const uniqueNewEvents = newEvents.filter(
+      (event) => !existingTaskIds.has(event.taskId)
+    );
+
+    if (uniqueNewEvents.length === 0) {
+      return res.status(200).json({
+        message: "No new events to add. All taskIds already exist.",
+        count: 0,
+      });
+    }
+
+    const updatedEvents = [...existingEvents, ...uniqueNewEvents];
+
+    await fsPromises.writeFile(
+      eventsFilePath,
+      JSON.stringify(updatedEvents, null, 2),
+      "utf8"
+    );
+
+    return res.status(200).json({
+      message: "New events saved successfully.",
+      count: uniqueNewEvents.length,
+    });
+  } catch (err) {
+    console.error("Error saving events:", err);
+    return res.status(500).json({ message: "Failed to process events." });
   }
 });
 
