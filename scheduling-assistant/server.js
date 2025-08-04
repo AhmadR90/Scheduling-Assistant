@@ -1,5 +1,6 @@
 // server.js
 import { v4 as uuidv4 } from "uuid";
+import cron from "node-cron";
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
@@ -11,7 +12,16 @@ import { google } from "googleapis";
 import OpenAI from "openai";
 import { buildSchedulingPrompt } from "./Utils/prompt.js";
 import { extractCleanJsonFromAiReply } from "./Utils/ResponseCleaner.js";
-
+import {
+  parseISO,
+  isBefore,
+  startOfWeek,
+  addDays,
+  format,
+  setHours,
+  setMinutes,
+  formatISO,
+} from "date-fns";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -84,6 +94,63 @@ try {
 app.use(cors());
 app.use(express.json());
 
+async function updateTasksToNewWeek(newWeekStartStr) {
+  const newWeekStart = parseISO(newWeekStartStr);
+
+  const fileContent = await fsPromises.readFile(eventsFilePath, "utf-8");
+  const tasks = JSON.parse(fileContent);
+
+  const updatedTasks = tasks.map((task) => {
+    const oldStartDate = parseISO(task.start);
+    const currentWeekStart = startOfWeek(oldStartDate, { weekStartsOn: 1 });
+
+    if (isBefore(currentWeekStart, newWeekStart)) {
+      const dayDiff = oldStartDate.getDay() - currentWeekStart.getDay();
+      const newDate = addDays(newWeekStart, dayDiff);
+
+      const startHour = oldStartDate.getHours();
+      const startMin = oldStartDate.getMinutes();
+      const endDate = parseISO(task.end);
+      const endHour = endDate.getHours();
+      const endMin = endDate.getMinutes();
+
+      const newStart = setMinutes(setHours(newDate, startHour), startMin);
+      const newEnd = setMinutes(setHours(newDate, endHour), endMin);
+
+      return {
+        ...task,
+        date: format(newDate, "yyyy-MM-dd"),
+        start: newStart.toISOString(),
+        end: newEnd.toISOString(),
+      };
+    }
+
+    return task;
+  });
+
+  await fsPromises.writeFile(
+    eventsFilePath,
+    JSON.stringify(updatedTasks, null, 2),
+    "utf-8"
+  );
+
+  console.log("✅ Tasks updated based on the new week.");
+}
+
+cron.schedule("1 0 * * 1", async () => {
+  const thisMonday = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const isoString = formatISO(thisMonday); // '2025-08-04T00:00:00Z'
+
+  console.log(`⏰ Running cron job for weekStart: ${isoString}`);
+  try {
+    await updateTasksToNewWeek(isoString);
+    console.log("✅ Tasks updated by cron job.");
+  } catch (err) {
+    console.error("❌ Error running cron job:", err);
+  }
+});
+
+
 async function initializeFile() {
   try {
     await fsPromises.access(filePath);
@@ -91,59 +158,6 @@ async function initializeFile() {
     await fsPromises.writeFile(filePath, JSON.stringify([], null, 2));
   }
 }
-
-// app.post("/api/generate-schedule", async (req, res) => {
-//   const { weekStart, employees, rules } = req.body;
-
-//   console.log("Generating schedule with weekStart:", weekStart);
-
-//   try {
-//     const prompt = buildSchedulingPrompt(employees, weekStart);
-//     const response = await openai.chat.completions.create({
-//       model: "gpt-4",
-//       messages: [
-//         {
-//           role: "system",
-//           content: "You are a scheduling assistant AI.",
-//         },
-//         {
-//           role: "user",
-//           content: prompt,
-//         },
-//       ],
-//       temperature: 0.3,
-//     });
-//     const reply = response.choices[0].message.content;
-//     const Correct=extractCleanJsonFromAiReply(reply)
-//     console.error("reply", Correct);
-//     let parsedSchedule;
-//     try {
-//       parsedSchedule = JSON.parse(Correct);
-//       console.log("parsed", parsedSchedule);
-//     } catch (jsonError) {
-
-//       return res
-//         .status(500)
-//         .json({ message: "Invalid schedule format received from AI." });
-//     }
-//     const eventContent = await fsPromises.readFile(eventsFilePath, "utf8");
-//     const events = JSON.parse(eventContent);
-
-//     for (const obj of parsedSchedule) {
-//       events.push(obj);
-//     }
-
-//     const updatedContent = JSON.stringify(events, null, 2);
-//     console.log("Updated Content", updatedContent);
-//     await fsPromises.writeFile(eventsFilePath, updatedContent);
-//     console.log(`✅ Schedule  added successfully to file`);
-//     res.json({ events: parsedSchedule });
-//   } catch (err) {
-//     console.error("Schedule Generation Error:", err);
-//     res.status(500).json({ message: "Failed to generate schedule" });
-//   }
-// });
-
 app.post("/api/generate-schedule", async (req, res) => {
   const { weekStart, employees, rules, externalEvents = [] } = req.body;
 
@@ -172,22 +186,22 @@ app.post("/api/generate-schedule", async (req, res) => {
         .status(500)
         .json({ message: "Invalid schedule format received from AI." });
     }
-
-    // Step 3: Read existing events file
-    const eventContent = await fsPromises.readFile(eventsFilePath, "utf8");
-    const events = JSON.parse(eventContent);
-
-    // Step 4: Add AI-generated schedule
+    let events = [];
+    try {
+      const eventContent = await fsPromises.readFile(eventsFilePath, "utf8");
+      events = eventContent.trim() ? JSON.parse(eventContent) : [];
+    } catch (err) {
+      if (err.code !== "ENOENT") {
+        console.error("Error reading events file:", err);
+        return res.status(500).json({ message: "Failed to read events file" });
+      }
+    }
     for (const obj of parsedSchedule) {
       events.push(obj);
     }
-
-    // Step 5: Add external Google Calendar events (like PTO or meetings)
     for (const event of externalEvents) {
       events.push(event);
     }
-
-    // Step 6: Write updated list to file
     const updatedContent = JSON.stringify(events, null, 2);
     await fsPromises.writeFile(eventsFilePath, updatedContent);
 
@@ -233,12 +247,10 @@ app.post("/api/generate-schedule-multiple", async (req, res) => {
         .json({ message: "Invalid schedule format received from AI." });
     }
 
-    // Write to file
     await fsPromises.writeFile(
       eventsFilePath,
       JSON.stringify(parsedSchedule, null, 2)
     );
-
     res.json({ events: parsedSchedule });
   } catch (err) {
     console.error("Schedule Generation Error:", err);
@@ -369,7 +381,6 @@ app.post("/api/save-google-events", async (req, res) => {
       .status(400)
       .json({ message: "Invalid data format. Expected an array." });
   }
-
   try {
     let existingEvents = [];
     if (fs.existsSync(eventsFilePath)) {
@@ -377,7 +388,6 @@ app.post("/api/save-google-events", async (req, res) => {
       existingEvents = JSON.parse(fileContent || "[]");
     }
 
-    // Step 2: Create a Set of existing taskIds for quick lookup
     const existingTaskIds = new Set(
       existingEvents.map((event) => event.taskId)
     );
@@ -391,15 +401,12 @@ app.post("/api/save-google-events", async (req, res) => {
         count: 0,
       });
     }
-
     const updatedEvents = [...existingEvents, ...uniqueNewEvents];
-
     await fsPromises.writeFile(
       eventsFilePath,
       JSON.stringify(updatedEvents, null, 2),
       "utf8"
     );
-
     return res.status(200).json({
       message: "New events saved successfully.",
       count: uniqueNewEvents.length,
