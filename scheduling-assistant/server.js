@@ -30,7 +30,8 @@ const eventsFilePath = path.join(__dirname, "public", "events.json");
 const events = fsPromises.readFile(eventsFilePath, "utf-8");
 async function loadInitialEmployees() {
   const fileData = await fsPromises.readFile(filePath, "utf-8");
-  return JSON.parse(fileData);
+  const data = fileData.trim() === "" ? [] : JSON.parse(fileData);
+  return data;
 }
 
 const INITIAL_EMPLOYEES = await loadInitialEmployees();
@@ -71,6 +72,7 @@ const {
 
 // --- In-Memory Data Stores ---
 let currentEmployees = { ...INITIAL_EMPLOYEES };
+console.log("Current employees", currentEmployees);
 let currentRules = { ...SCHEDULING_RULES };
 
 // --- API Clients ---
@@ -139,7 +141,7 @@ async function updateTasksToNewWeek(newWeekStartStr) {
 
 cron.schedule("1 0 * * 1", async () => {
   const thisMonday = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const isoString = formatISO(thisMonday); // '2025-08-04T00:00:00Z'
+  const isoString = formatISO(thisMonday); 
 
   console.log(`⏰ Running cron job for weekStart: ${isoString}`);
   try {
@@ -149,7 +151,6 @@ cron.schedule("1 0 * * 1", async () => {
     console.error("❌ Error running cron job:", err);
   }
 });
-
 
 async function initializeFile() {
   try {
@@ -420,7 +421,8 @@ app.post("/api/save-google-events", async (req, res) => {
 app.get("/api/employees", async (req, res) => {
   try {
     const fileData = await fsPromises.readFile(filePath, "utf-8");
-    const data = JSON.parse(fileData);
+    const data = fileData.trim() === "" ? [] : JSON.parse(fileData);
+
     res.status(200).json(data);
   } catch (err) {
     console.error("Error reading employees file:", err);
@@ -463,7 +465,7 @@ app.post("/api/employees", async (req, res) => {
       await initializeFile();
 
       const fileContent = await fsPromises.readFile(filePath, "utf8");
-      let currentEmployees = JSON.parse(fileContent);
+      let currentEmployees = fileContent.trim() === "" ? [] : JSON.parse(fileContent);
       currentEmployees.push(newUser);
       const updatedContent = JSON.stringify(currentEmployees, null, 2);
       await fsPromises.writeFile(filePath, updatedContent);

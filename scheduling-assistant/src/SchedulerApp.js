@@ -47,7 +47,10 @@ export default function SchedulerApp({
 
   useEffect(() => {
     const fetchGeneratedSchedule = async () => {
-      if (!rules?.coverage || Object.keys(employees).length === 0) return;
+      if (!rules?.coverage || Object.keys(employees).length === 0) {
+        setIsLoading(false);
+        return;
+      }
 
       setIsLoading(true);
 
@@ -255,7 +258,7 @@ function convertGoogleEventsToInternalFormat(googleEvents, employeesMap) {
       const employeeId = employeeEntry.id;
       const date = new Date(event.start).toISOString().split("T")[0];
       const taskId = `${event.id}`;
-      
+
       internalEvents.push({
         employeeId,
         title: event.title,
