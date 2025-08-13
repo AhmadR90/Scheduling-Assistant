@@ -186,7 +186,7 @@ export default function SchedulerApp({
   return (
     <div className="scheduler-container">
       {isLoading && (
-        <div className="loading-overlay">Generating Schedule...</div>
+        <div className="loading-overlay">Getting Schedule...</div>
       )}
       <FullCalendar
         key={weekStart}
@@ -241,11 +241,6 @@ function getTaskColor(task) {
 }
 function convertGoogleEventsToInternalFormat(googleEvents, employeesMap) {
   const internalEvents = [];
-  console.log(
-    "Event IDs:",
-    googleEvents.map((event) => event.id)
-  );
-
   const randomNum = Math.floor(100 + Math.random() * 900);
   for (const event of googleEvents) {
     if (!event.attendees || !event.attendees.length) continue;

@@ -72,7 +72,6 @@ const {
 
 // --- In-Memory Data Stores ---
 let currentEmployees = { ...INITIAL_EMPLOYEES };
-console.log("Current employees", currentEmployees);
 let currentRules = { ...SCHEDULING_RULES };
 
 // --- API Clients ---
