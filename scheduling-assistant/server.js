@@ -140,7 +140,7 @@ async function updateTasksToNewWeek(newWeekStartStr) {
 
 cron.schedule("1 0 * * 1", async () => {
   const thisMonday = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const isoString = formatISO(thisMonday); 
+  const isoString = formatISO(thisMonday);
 
   console.log(`⏰ Running cron job for weekStart: ${isoString}`);
   try {
@@ -160,7 +160,7 @@ async function initializeFile() {
 }
 app.post("/api/generate-schedule", async (req, res) => {
   const { weekStart, employees, rules, externalEvents = [] } = req.body;
-
+  console.log("employee", employees);
   console.log("Generating schedule with weekStart:", weekStart);
   const fileContent = await fsPromises.readFile(eventsFilePath, "utf8");
   const existingEvents = JSON.parse(fileContent || "[]");
@@ -172,7 +172,7 @@ app.post("/api/generate-schedule", async (req, res) => {
         { role: "system", content: "You are a scheduling assistant AI." },
         { role: "user", content: prompt },
       ],
-      temperature: 0.3,
+      temperature: 0.1,
     });
     const reply = response.choices[0].message.content;
     const cleaned = extractCleanJsonFromAiReply(reply);
@@ -464,7 +464,8 @@ app.post("/api/employees", async (req, res) => {
       await initializeFile();
 
       const fileContent = await fsPromises.readFile(filePath, "utf8");
-      let currentEmployees = fileContent.trim() === "" ? [] : JSON.parse(fileContent);
+      let currentEmployees =
+        fileContent.trim() === "" ? [] : JSON.parse(fileContent);
       currentEmployees.push(newUser);
       const updatedContent = JSON.stringify(currentEmployees, null, 2);
       await fsPromises.writeFile(filePath, updatedContent);

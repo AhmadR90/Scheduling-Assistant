@@ -428,7 +428,7 @@ export default function App() {
             setEditingEmployee={setEditingEmployee}
             onRemoveEmployee={handleRemoveEmployee}
             onAddNewEmployee={initializeState}
-            isAddingEmployee={isAddingEmployee} // Pass loading state to AdminPanel
+            isAddingEmployee={isAddingEmployee} 
           />
         )}
       </div>

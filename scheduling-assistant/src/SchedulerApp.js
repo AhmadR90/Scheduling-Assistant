@@ -78,8 +78,8 @@ export default function SchedulerApp({
         });
 
         const response = await fetch("/events.json");
-        const result = await response.json();
 
+        const result = await response.json();
         const fullCalendarEvents = [];
 
         for (const emp of result) {
@@ -106,13 +106,14 @@ export default function SchedulerApp({
           });
         }
         onEventsGenerated(fullCalendarEvents);
+        console.log(fullCalendarEvents)
       } catch (error) {
         console.error("Error fetching AI-generated schedule:", error);
       } finally {
         setIsLoading(false);
       }
     };
-
+    
     fetchGeneratedSchedule();
   }, [weekStart, employees, rules, onEventsGenerated, emailToEmployeeMap]);
 
@@ -185,9 +186,7 @@ export default function SchedulerApp({
 
   return (
     <div className="scheduler-container">
-      {isLoading && (
-        <div className="loading-overlay">Getting Schedule...</div>
-      )}
+      {isLoading && <div className="loading-overlay">Getting Schedule...</div>}
       <FullCalendar
         key={weekStart}
         plugins={[resourceTimelinePlugin, interactionPlugin]}

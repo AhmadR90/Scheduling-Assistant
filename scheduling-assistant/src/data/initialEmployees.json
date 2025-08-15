@@ -1,0 +1,141 @@
+[
+  {
+    "id": "7dd4a9c2-00a1-4fc0-8160-0fc46d5dbccf",
+    "name": "Ahmad",
+    "email": "another@gmail.com",
+    "shift": {
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "hours": 40,
+    "abilities": [
+      "Reservations",
+      "Dispatch"
+    ],
+    "specialistTask": "",
+    "schedulingNotes": "",
+    "pto": [],
+    "specialistTarget": 0
+  },
+  {
+    "id": "8a4ada24-8c60-45c6-a467-f35fd1614435",
+    "name": "Ali",
+    "email": "Raza@gmail.com",
+    "shift": {
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "hours": 40,
+    "abilities": [
+      "Reservations",
+      "Marketing",
+      "Scheduling",
+      "Security"
+    ],
+    "specialistTask": "",
+    "schedulingNotes": "",
+    "pto": [],
+    "specialistTarget": 0
+  },
+  {
+    "id": "f9ff0ab9-663d-4764-ba3f-27a34af1267e",
+    "name": "dummy",
+    "email": "Raza@gmail.com",
+    "shift": {
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "hours": 40,
+    "abilities": [
+      "Reservations",
+      "Dispatch",
+      "Journey Desk",
+      "Security"
+    ],
+    "specialistTask": "",
+    "schedulingNotes": "",
+    "pto": [],
+    "specialistTarget": 0
+  },
+  {
+    "id": "20f6c905-b8af-4b7f-b3b3-884b68e5169b",
+    "name": "Ahmad",
+    "email": "user@gmail.com",
+    "shift": {
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "hours": 40,
+    "abilities": [
+      "Reservations"
+    ],
+    "specialistTask": "",
+    "schedulingNotes": "",
+    "pto": [],
+    "specialistTarget": 0
+  },
+  {
+    "id": "e4fc421a-9d09-4e39-8b05-78adec239155",
+    "name": "Hamid",
+    "email": "ahmedrazawarriach786@gmail.com",
+    "shift": {
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "hours": 40,
+    "abilities": [
+      "Reservations",
+      "Dispatch",
+      "Security",
+      "Scheduling"
+    ],
+    "specialistTask": "",
+    "schedulingNotes": "",
+    "pto": [],
+    "specialistTarget": 12
+  },
+  {
+    "id": "b6cb0a70-cf45-42d2-a683-5f19155d308b",
+    "name": "Momin",
+    "email": "client@gmail.com",
+    "shift": {
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "lunch": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "hours": 40,
+    "abilities": [
+      "Reservations",
+      "Dispatch",
+      "Marketing",
+      "Journey Desk"
+    ],
+    "specialistTask": "",
+    "schedulingNotes": "",
+    "pto": [],
+    "specialistTarget": 0
+  }
+]
